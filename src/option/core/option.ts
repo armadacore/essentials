@@ -1,5 +1,4 @@
 /* eslint-disable no-undefined, no-restricted-syntax, no-null/no-null, @typescript-eslint/no-explicit-any, @typescript-eslint/no-restricted-types */
-import { isArray } from 'essentials:check';
 import { Exception } from 'essentials:exceptions';
 import { type IOption } from '../models/IOption';
 import { NoneOption } from './noneOption';
@@ -49,7 +48,7 @@ export const toOption = <T>(value: unknown): IOption<T> => {
 	if (value instanceof OptionBase) return value;
 	if (isJsonString(value)) return toOption(JSON.parse(value));
 	if (typeof value !== 'object') return None();
-	if (isArray(value)) return value.map(toOption) as any;
+	if (Array.isArray(value)) return value.map(toOption) as any;
 	if ('isSome' in value && 'isNone' in value)
 		return value.isSome ? Some((value as unknown as { value: T }).value) : None();
 

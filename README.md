@@ -8,8 +8,6 @@ Provides:
 - **`Result<T>`** — error-as-value with a fixed `Exception` failure type.
 - **`Exception`** hierarchy — HTTP-status-aware error types with `info` tag and `cause` propagation.
 - **`Callback<T>`** — wrapper around an optional function value.
-- **`check`** — small structural assertion utilities.
-- **`timer`** — minimal timing helper.
 
 ## Status
 

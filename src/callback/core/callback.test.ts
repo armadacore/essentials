@@ -1,24 +1,27 @@
 /* eslint-disable @typescript-eslint/no-magic-numbers */
 /* eslint-disable no-undefined */
 import { describe, expect, it, vi } from 'vitest';
+import { Exception } from 'essentials:exceptions';
 import { Callback } from './callback';
 
 /**
- * Tests document the CURRENT (as-is) behaviour of {@link Callback}.
+ * Tests document the behaviour of {@link Callback}.
  *
- * Pinned quirks worth noting (see ANALYSIS.md):
+ * History note: prior to Sprint 1 this suite pinned F-08 (executeOr
+ * dropped the spread args) plus the dead-code branches for the missing
+ * `_callback` (the guards used `if (!this._callback)` even though
+ * `Callback.none()` installed a truthy noop, so the branches were never
+ * reachable). Both have been fixed and the assertions now describe the
+ * corrected behaviour:
  *
- *  - F-08: {@link Callback.executeOr} invokes the fallback WITHOUT
- *          forwarding the spread args. Demonstrated below.
- *  - The `if (!this._callback)` short-circuit in {@link Callback.execute}
- *          / {@link Callback.executeOr} / {@link Callback.handover} is
- *          effectively dead code: {@link Callback.none} installs a
- *          truthy noop function, so `_callback` is never falsy. The
- *          asserted contract therefore goes through the real callback
- *          (returning undefined for the noop) rather than through the
- *          guard.
+ *  - The Some/None split is driven by `_hasCallback`.
+ *  - {@link Callback.execute} throws when no callback is registered.
+ *  - {@link Callback.executeOr} runs the fallback WITH the spread
+ *    args when no callback is registered.
+ *  - {@link Callback.handover} keeps returning the noop for `none()`,
+ *    so callers can safely invoke the result.
  */
-describe('Callback (as-is behaviour)', () => {
+describe('Callback', () => {
 	describe('Callback.create', () => {
 		it('records exists() === true', () => {
 			expect(Callback.create(() => 1).exists()).toBe(true);
@@ -45,13 +48,14 @@ describe('Callback (as-is behaviour)', () => {
 			expect(Callback.none().exists()).toBe(false);
 		});
 
-		it('execute returns undefined (the noop\u2019s implicit return)', () => {
-			expect(Callback.none<() => number>().execute()).toBeUndefined();
+		it('execute throws an Exception when no callback is registered', () => {
+			expect(() => Callback.none<() => number>().execute()).toThrow(Exception);
+			expect(() => Callback.none<() => number>().execute()).toThrow(
+				/Called execute\(\) on a Callback without a registered function/,
+			);
 		});
 
-		it('handover returns a callable noop (not the dead-code fallback)', () => {
-			// `_callback` is the truthy noop from `Callback.none()`, so the
-			// `if (!this._callback)` branch in handover() is never taken.
+		it('handover still returns a callable noop (returns undefined)', () => {
 			const handed = Callback.none<() => number>().handover();
 
 			expect(typeof handed).toBe('function');
@@ -79,7 +83,7 @@ describe('Callback (as-is behaviour)', () => {
 		});
 	});
 
-	describe('executeOr (F-08 pinned)', () => {
+	describe('executeOr', () => {
 		it('runs the wrapped callback when it exists, with all args forwarded', () => {
 			const fn = vi.fn((a: number, b: number) => a + b);
 			const fallback = vi.fn(() => 0);
@@ -91,23 +95,24 @@ describe('Callback (as-is behaviour)', () => {
 			expect(fallback).not.toHaveBeenCalled();
 		});
 
-		it('does NOT trigger the fallback for Callback.none() either, because _callback is the truthy noop', () => {
-			const fallback = vi.fn(() => 99);
+		it('runs the fallback for Callback.none() and forwards the spread args', () => {
+			const fallback = vi.fn((a: number, b: number) => a + b);
+			const cb = Callback.none<(a: number, b: number) => number>();
 
-			// `_callback` is the noop from Callback.none(), so the guard
-			// `if (!this._callback)` is false and the noop runs (returning
-			// undefined). The fallback is never invoked.
-			const cb = Callback.none<() => number>();
-			const out = cb.executeOr(fallback);
+			const out = cb.executeOr(fallback, 4, 5);
 
-			expect(out).toBeUndefined();
-			expect(fallback).not.toHaveBeenCalled();
+			expect(out).toBe(9);
+			expect(fallback).toHaveBeenCalledWith(4, 5);
 		});
-	});
 
-	describe('execute when no callback exists', () => {
-		it('runs the noop and returns undefined for Callback.none', () => {
-			expect(Callback.none<() => number>().execute()).toBeUndefined();
+		it('forwards args even when the fallback ignores them (regression for F-08)', () => {
+			const fallback = vi.fn(() => 99);
+			const cb = Callback.none<(a: number, b: number) => number>();
+
+			const out = cb.executeOr(fallback as unknown as (a: number, b: number) => number, 2, 3);
+
+			expect(out).toBe(99);
+			expect(fallback).toHaveBeenCalledWith(2, 3);
 		});
 	});
 });

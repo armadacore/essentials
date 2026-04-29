@@ -2,6 +2,7 @@
 /* eslint-disable @typescript-eslint/no-restricted-types */
 /* eslint-disable @typescript-eslint/naming-convention */
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { Exception } from 'essentials:exceptions';
 import { Option } from 'essentials:option';
 import type { ICallback } from '../models/ICallback';
 
@@ -38,20 +39,20 @@ export class Callback<T extends (...args: any[]) => any> implements ICallback<T>
 	}
 
 	public execute(...args: Parameters<T>): ReturnType<T> {
-		if (!this._callback) return (() => '' as unknown)() as ReturnType<T>;
+		if (!this._hasCallback) {
+			throw new Exception('Called execute() on a Callback without a registered function');
+		}
 
 		return this._callback(...args) as ReturnType<T>;
 	}
 
 	public executeOr(orExecute: T, ...args: Parameters<T>): ReturnType<T> {
-		if (!this._callback) return orExecute() as ReturnType<T>;
+		if (!this._hasCallback) return orExecute(...args) as ReturnType<T>;
 
 		return this._callback(...args) as ReturnType<T>;
 	}
 
 	public handover(): T {
-		if (!this._callback) return (() => {}) as T;
-
 		return this._callback;
 	}
 }

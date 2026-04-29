@@ -9,7 +9,6 @@ import { type IException } from '../models/IException';
  * Maintains full Error compatibility while adding business context.
  */
 export class Exception extends Error implements IException {
-	private readonly options: { cause?: unknown } | undefined = undefined;
 	protected _info: string = 'UNKNOWN_ERROR';
 
 	/**
@@ -18,10 +17,9 @@ export class Exception extends Error implements IException {
 	 * @param {ErrorOptions} [options] - Error options for stack trace and cause (optional)
 	 */
 	constructor(message?: string, options?: { cause?: unknown }) {
-		super(message);
+		super(message, options);
 
 		this.name = 'Exception';
-		this.options = options;
 
 		// Maintain proper prototype chain for instanceof checks
 		Object.setPrototypeOf(this, new.target.prototype);
@@ -44,17 +42,19 @@ export class Exception extends Error implements IException {
 	}
 
 	/**
-	 * Custom JSON serialization to include Error properties
+	 * Custom JSON serialization to include Error properties.
+	 *
+	 * Intentionally omits `stack` to avoid leaking implementation
+	 * details / internal paths into serialised payloads (e.g. API
+	 * responses, logs shipped off-host).
 	 * @returns {object} Object representation for JSON serialization
 	 */
 	toJSON(): Record<string, unknown> {
 		return {
 			name: this.name,
 			message: this.message,
-			// eslint-disable-next-line @typescript-eslint/naming-convention
-			_info: this._info,
-			stack: this.stack,
-			cause: this.options?.cause,
+			info: this._info,
+			cause: (this as Error & { cause?: unknown }).cause,
 		};
 	}
 

@@ -3,21 +3,15 @@ import { describe, expect, it } from 'vitest';
 import { Exception } from './exception';
 
 /**
- * Tests document the CURRENT (as-is) behaviour of {@link Exception}.
+ * Tests document the behaviour of {@link Exception}.
  *
- * Several of these assertions intentionally pin known bugs from
- * `ANALYSIS.md` so that any future fix is a deliberate, breaking change:
- *
- *  - F-41: `cause` is stored on a private field instead of being forwarded
- *          to the native `Error` constructor → `error.cause` is `undefined`.
- *  - F-49: {@link Exception.toJSON} emits the property as `_info` instead
- *          of `info`, so JSON output disagrees with the `info` getter.
- *  - F-50: {@link Exception.toJSON} leaks the full `stack` string.
- *
- * Do NOT change the assertions for those bugs without confirming the fix
- * is intended and approved.
+ * History note: prior to Sprint 1 these assertions pinned three known
+ * P0 bugs (F-41 cause not forwarded to native Error, F-49 toJSON
+ * emitted `_info` instead of `info`, F-50 toJSON leaked `stack`).
+ * All three have been fixed and the assertions now describe the
+ * corrected behaviour.
  */
-describe('Exception (as-is behaviour)', () => {
+describe('Exception', () => {
 	describe('construction', () => {
 		it('extends Error', () => {
 			const ex = new Exception('boom');
@@ -47,37 +41,40 @@ describe('Exception (as-is behaviour)', () => {
 		});
 	});
 
-	describe('cause handling (F-41 — known bug pinned)', () => {
-		it('does NOT forward cause to the native Error (F-41)', () => {
+	describe('cause handling', () => {
+		it('forwards cause to the native Error.cause property', () => {
 			const inner = new Error('inner');
 			const ex = new Exception('outer', { cause: inner });
 
-			// Native ES2022 cause is lost because the constructor passes
-			// only `message` to `super()`. This is F-41.
-			expect((ex as Error & { cause?: unknown }).cause).toBeUndefined();
+			expect((ex as Error & { cause?: unknown }).cause).toBe(inner);
 		});
 
-		it('still surfaces the cause via toJSON()', () => {
+		it('also surfaces the cause via toJSON()', () => {
 			const inner = new Error('inner');
 			const ex = new Exception('outer', { cause: inner });
 
 			expect(ex.toJSON().cause).toBe(inner);
 		});
+
+		it('leaves cause undefined when no options are passed', () => {
+			const ex = new Exception('boom');
+
+			expect((ex as Error & { cause?: unknown }).cause).toBeUndefined();
+		});
 	});
 
 	describe('toJSON()', () => {
-		it('emits "_info" instead of "info" (F-49 — known bug pinned)', () => {
+		it('emits "info" (matching the getter)', () => {
 			const json = new Exception('boom').toJSON();
 
-			expect(json).toHaveProperty('_info', 'UNKNOWN_ERROR');
-			expect(json).not.toHaveProperty('info');
+			expect(json).toHaveProperty('info', 'UNKNOWN_ERROR');
+			expect(json).not.toHaveProperty('_info');
 		});
 
-		it('includes the stack (F-50 — known leak pinned)', () => {
+		it('does NOT include the stack (no internal-path leakage)', () => {
 			const json = new Exception('boom').toJSON();
 
-			expect(typeof json['stack']).toBe('string');
-			expect(json['stack']).toMatch(/Exception/);
+			expect(json).not.toHaveProperty('stack');
 		});
 
 		it('includes name, message and cause keys', () => {
@@ -99,9 +96,11 @@ describe('Exception (as-is behaviour)', () => {
 			const ex = new Exception('boom');
 			const parsed = JSON.parse(JSON.stringify(ex)) as Record<string, unknown>;
 
-			expect(parsed['_info']).toBe('UNKNOWN_ERROR');
+			expect(parsed['info']).toBe('UNKNOWN_ERROR');
 			expect(parsed['name']).toBe('Exception');
 			expect(parsed['message']).toBe('boom');
+			expect(parsed).not.toHaveProperty('stack');
+			expect(parsed).not.toHaveProperty('_info');
 		});
 	});
 
@@ -120,18 +119,12 @@ describe('Exception (as-is behaviour)', () => {
 			expect(ex.stack).toBe(source.stack);
 		});
 
-		it('stores the source error as cause (visible via toJSON)', () => {
+		it('forwards the source error onto Error.cause and toJSON()', () => {
 			const source = new Error('boom');
 			const ex = Exception.fromError(source);
 
+			expect((ex as Error & { cause?: unknown }).cause).toBe(source);
 			expect(ex.toJSON().cause).toBe(source);
-		});
-
-		it('also drops cause off the native Error (F-41)', () => {
-			const source = new Error('boom');
-			const ex = Exception.fromError(source);
-
-			expect((ex as Error & { cause?: unknown }).cause).toBeUndefined();
 		});
 
 		it('does not throw when source has no stack', () => {

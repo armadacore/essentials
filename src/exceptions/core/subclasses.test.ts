@@ -10,19 +10,17 @@ import { ServiceUnavailableException } from './serviceUnavailableException';
 import { UnauthorizedException } from './unauthorizedException';
 
 /**
- * Tests document the CURRENT (as-is) behaviour of all HTTP-status
- * Exception subclasses. They share a structural contract:
+ * Tests document the behaviour of all HTTP-status Exception subclasses.
+ * They share a structural contract:
  *   - extend {@link Exception} (and therefore {@link Error})
  *   - own a fixed `info` token
  *   - own a fixed default `name`
  *   - have a fixed default message (with one exception: see below)
  *
- * Pinned quirks worth noting:
- *  - {@link BadRequestException} and {@link NotFoundException} do NOT
- *    set a default message — they are constructible with `message ===
- *    ''`. The other five subclasses fall back to a human-readable
- *    default. This asymmetry is intentional to lock the current
- *    behaviour; see ANALYSIS.md (F-43, F-46).
+ * Asymmetry note: {@link BadRequestException} and {@link NotFoundException}
+ * do NOT set a default message \u2014 they are constructible with
+ * `message === ''`. The other five subclasses fall back to a
+ * human-readable default. See ANALYSIS.md (F-43, F-46).
  */
 
 interface ISubclassSpec {
@@ -42,7 +40,7 @@ const subclasses: readonly ISubclassSpec[] = [
 	{ ctor: UnauthorizedException, name: 'UnauthorizedException', info: 'UNAUTHORIZED', defaultMessage: 'Unauthorized' },
 ];
 
-describe('HTTP-status Exception subclasses (as-is behaviour)', () => {
+describe('HTTP-status Exception subclasses', () => {
 	for (const spec of subclasses) {
 		describe(spec.name, () => {
 			it('extends Exception and Error', () => {
@@ -69,15 +67,15 @@ describe('HTTP-status Exception subclasses (as-is behaviour)', () => {
 				expect(new spec.ctor('explicit').message).toBe('explicit');
 			});
 
-			it('emits the subclass info via toJSON() under "_info" (F-49 pinned)', () => {
-				expect(new spec.ctor().toJSON()['_info']).toBe(spec.info);
+			it('emits the subclass info via toJSON() under "info"', () => {
+				expect(new spec.ctor().toJSON()['info']).toBe(spec.info);
 			});
 
-			it('drops the cause from the native Error (F-41 pinned)', () => {
+			it('forwards the cause onto the native Error and toJSON()', () => {
 				const inner = new Error('inner');
 				const ex = new spec.ctor('msg', { cause: inner });
 
-				expect((ex as Error & { cause?: unknown }).cause).toBeUndefined();
+				expect((ex as Error & { cause?: unknown }).cause).toBe(inner);
 				expect(ex.toJSON().cause).toBe(inner);
 			});
 		});

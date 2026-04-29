@@ -1,0 +1,752 @@
+# `timi-essentials` — Analyse & Migrationsplan
+
+Dieses Dokument fasst die vollständige Code-Analyse der Library `@timi/timi-essentials` (ursprünglich Bestandteil des `timi`-Monorepos) zusammen und definiert einen viergliedrigen Sprint-Plan für die Aufräumarbeit, die im Zuge der Auslagerung in dieses eigene Repository erfolgen soll.
+
+Die Analyse wurde im Read-Only-Modus, Datei für Datei, gemeinsam mit dem ursprünglichen Source-Tree durchgeführt. Übersprungen wurden auf Wunsch die Features `check/` und `timer/`. Alle Beobachtungen, Befunde und Empfehlungen sind hier vollständig dokumentiert.
+
+---
+
+## Inhaltsverzeichnis
+
+1. [Ausgangs-Struktur](#1-ausgangs-struktur)
+2. [Architektur-Übersicht](#2-architektur-übersicht)
+3. [Feature-Analyse](#3-feature-analyse)
+   - 3.1 [Root `index.ts`](#31-root-srcindexts)
+   - 3.2 [Feature `callback/`](#32-feature-callback)
+   - 3.3 [Feature `option/`](#33-feature-option)
+   - 3.4 [Feature `result/`](#34-feature-result)
+   - 3.5 [Feature `exceptions/`](#35-feature-exceptions)
+4. [Konsolidierte Findings-Liste](#4-konsolidierte-findings-liste)
+5. [Priorisierung](#5-priorisierung)
+6. [Test-Strategie](#6-test-strategie)
+7. [Vorgeschlagene `.rules/`-Dateien](#7-vorgeschlagene-rules-dateien)
+8. [Sprint-Plan](#8-sprint-plan)
+9. [Festgelegte Entscheidungen](#9-festgelegte-entscheidungen)
+10. [Offene Punkte / Backlog](#10-offene-punkte--backlog)
+
+---
+
+## 1. Ausgangs-Struktur
+
+```
+timi-essentials/
+├── package.json
+├── tsconfig.json
+├── dist/                       # Build-Output (gitignored)
+└── src/
+    ├── index.ts                # Root-Barrel, Re-Export aller Features
+    ├── callback/
+    │   ├── index.ts
+    │   ├── core/callback.ts
+    │   └── models/ICallback.ts
+    ├── check/                  # NICHT analysiert (übersprungen)
+    │   ├── index.ts
+    │   ├── Constants.ts
+    │   └── core/{string,array}.ts
+    ├── exceptions/
+    │   ├── index.ts
+    │   ├── models/IException.ts
+    │   └── core/
+    │       ├── exception.ts
+    │       ├── badRequestException.ts
+    │       ├── conflictException.ts
+    │       ├── forbiddenException.ts
+    │       ├── httpStatusExceptionFactory.ts
+    │       ├── internalServerErrorException.ts
+    │       ├── notFoundException.ts
+    │       ├── serviceUnavailableException.ts
+    │       └── unauthorizedException.ts
+    ├── option/
+    │   ├── index.ts
+    │   ├── models/{IOption,AsOptional}.ts
+    │   ├── guards/isOption.ts
+    │   └── core/
+    │       ├── option.ts
+    │       ├── optionBase.ts
+    │       ├── someOption.ts
+    │       └── noneOption.ts
+    ├── result/
+    │   ├── index.ts
+    │   ├── models/IResult.ts
+    │   ├── guards/isResult.ts
+    │   └── core/
+    │       ├── result.ts
+    │       ├── resultBase.ts
+    │       ├── okResult.ts
+    │       └── errResult.ts
+    └── timer/                  # NICHT analysiert (übersprungen)
+        ├── index.ts
+        └── core/timer.ts
+```
+
+### Build-Setup (`package.json`)
+
+- ESM-Module (`"type": "module"`), privates Workspace-Paket
+- Build via `tsc -p tsconfig.json && tsc-alias -p tsconfig.json -f`
+- Dev via `concurrently`-Watch
+- Keine `devDependencies` deklariert (werden aus dem Workspace-Root bezogen)
+- Path-Alias `timi-essentials:*` → `./src/*`
+
+### Stand der `.DS_Store`-Dateien
+
+In `src/` und `src/callback/` befinden sich `.DS_Store`-Dateien. Diese gehören in `.gitignore`.
+
+---
+
+## 2. Architektur-Übersicht
+
+### Dependency-Graph der Features
+
+```
+        ┌──────────────┐
+        │  exceptions  │   (Wurzel-Feature, keine internen Deps)
+        └───────▲──────┘
+                │
+       ┌────────┼─────────┐
+       │        │         │
+   ┌───┴──┐ ┌───┴──┐  ┌───┴────┐
+   │option│ │result│  │callback│
+   └───▲──┘ └──────┘  └────────┘
+       │
+       │ (Callback.from baut auf Option.from)
+       │
+   ┌───┴────┐
+   │callback│
+   └────────┘
+
+   check  ─→  option (option.ts importiert isArray)
+```
+
+**Befund:** Keine Zyklen. `exceptions/` ist tatsächlich die unterste Schicht — alle anderen Features dürfen Exception importieren, ohne Architekturschulden zu erzeugen.
+
+### Public-API-Oberfläche (über Root-Barrel)
+
+| Feature | Export-Anzahl (geschätzt) | Vollständig intentional? |
+|---|---|---|
+| `callback` | 2 (`Callback`, `ICallback`) | ✓ |
+| `check` | (nicht analysiert) | – |
+| `exceptions` | ~10 (Basis + 7 Subklassen + Factory + Interface) | ✓ |
+| `option` | 8+ (`Option`, `Some`, `None`, `IOption`, `SomeOption`, `NoneOption`, `isOption`, `AsOptional`, `toOption`, `toJsonString`, `toJsonObject`) | teilweise **unbeabsichtigt** (siehe F-15, F-16) |
+| `result` | 7 (`Result`, `Ok`, `Err`, `IResult`, `OkResult`, `ErrResult`, `isResult`) | teilweise **unbeabsichtigt** (siehe F-40) |
+| `timer` | (nicht analysiert) | – |
+
+---
+
+## 3. Feature-Analyse
+
+### 3.1 Root `src/index.ts`
+
+```typescript
+export * from './callback';
+export * from './check';
+export * from './exceptions';
+export * from './option';
+export * from './result';
+export * from './timer'
+```
+
+#### Beobachtungen
+
+**Positiv**
+- Konventionskonform: Re-Exports ausschließlich aus den Feature-Barrels, nicht aus `core/` oder `models/`
+- Alphabetisch sortiert (Diff-stabil)
+- Keine Implementierung im Root
+
+**Auffälligkeiten**
+- **F-01** Inkonsistenz: relative Pfade vs. Path-Alias. Innerhalb der Library werden relative Pfade verwendet, der Alias `timi-essentials:*` ist primär für externe Konsumenten gedacht. Klärung erforderlich, ob das gewollt ist.
+- **F-02** Fehlendes Semikolon in Zeile 6 (`./timer`). Inkonsistent zu den restlichen Zeilen. Kosmetik.
+- **F-03** `export *`-Wildcards leaken automatisch alles, was ein Feature-Barrel exportiert. Es gibt keine zentrale Public-API-Liste. Alternative: explizite Re-Exports (z.B. `export { Option, isOption } from './option';`). Vorteil: dokumentierte API. Nachteil: Wartungsaufwand pro Feature-Erweiterung.
+- **F-04** Kollisionsrisiko bei wachsender Feature-Zahl. Aktuell kollisionsfrei, aber `check/` exportiert eine `Constants` — bei Wachstum wahrscheinlich.
+
+---
+
+### 3.2 Feature `callback/`
+
+#### Inhalt
+- `index.ts`: Re-Export von Klasse `Callback` und Interface `ICallback`
+- `models/ICallback.ts`: Interface mit 4 Methoden (`exists`, `execute`, `executeOr`, `handover`)
+- `core/callback.ts`: Klasse `Callback<T>` mit privatem Konstruktor und 3 statischen Factories (`create`, `none`, `from`)
+
+#### Konzept
+Wrapper um eine optionale Funktion. Statt `myCb?.(x)` schreibt man `Callback.from(myCb).execute(x)`. Spiegelt das `Option<T>`-Pattern für Funktionen.
+
+#### Beobachtungen
+
+**Positiv**
+- Privater Konstruktor + statische Factories (konsistent zum Option/Result-Stil)
+- `Callback.from` baut sauber auf `Option.from` auf — schöne Komposition
+- Konventionskonforme Struktur (Interface in `models/`, Implementierung in `core/`)
+
+**Kritische Findings**
+
+- **F-05** Vier `eslint-disable`-Direktiven am Dateikopf ohne Begründung:
+  - `no-restricted-syntax`
+  - `@typescript-eslint/no-restricted-types`
+  - `@typescript-eslint/naming-convention`
+  - `@typescript-eslint/no-explicit-any`
+
+  Laut Projektregeln verboten ohne Rücksprache. `no-explicit-any` ist legitim (generischer Funktionstyp `T extends (...args: any[]) => any`), `naming-convention` triggert vermutlich auf `_callback`/`_hasCallback`. Die anderen beiden sind unklar — Audit erforderlich.
+
+- **F-06** `execute()` (Zeile 41) — verdächtige Logik:
+  ```typescript
+  if (!this._callback) return (() => '' as unknown)() as ReturnType<T>;
+  ```
+  - `this._callback` ist via `none()` immer mit einem `noop` belegt → toter Branch
+  - Selbst wenn er triggern würde: leerer String, getypt als `ReturnType<T>` → **Typ-Lüge**
+
+- **F-07** `handover()` (Zeile 53) — gleiche Lügen-Konstruktion:
+  ```typescript
+  if (!this._callback) return (() => {}) as T;
+  ```
+  Toter Branch + Typ-Lüge.
+
+- **F-08** `executeOr` ignoriert `args`:
+  ```typescript
+  public executeOr(orExecute: T, ...args: Parameters<T>): ReturnType<T> {
+      if (!this._callback) return orExecute() as ReturnType<T>;  // ← args fehlen!
+      return this._callback(...args) as ReturnType<T>;
+  }
+  ```
+  **Bug**: Im Fallback-Pfad wird `orExecute` ohne Argumente aufgerufen.
+
+- **F-09** Doppelte Wahrheitsquelle: `_callback` und `_hasCallback`. `none()` setzt `_callback = noop` und `_hasCallback = false`. Synchronisationspflicht zwischen zwei Feldern, dadurch tote `if (!this._callback)`-Branches.
+
+- **F-10** `from`-Signatur akzeptiert nur `T | undefined`, nicht `null`. Inkonsistent zu `Option.from(value: T | null | undefined)`.
+
+- **F-11** **Keine Tests.**
+
+---
+
+### 3.3 Feature `option/`
+
+#### Inhalt
+
+| Datei | Rolle |
+|---|---|
+| `index.ts` | Re-Exports aller 6 Untermodule |
+| `models/IOption.ts` | Interface mit ~20 Methoden (Rust-Option-inspiriert) |
+| `models/AsOptional.ts` | Type-Helper (`Omit & Partial<Pick>`) |
+| `guards/isOption.ts` | Strukturelle Type-Guard |
+| `core/optionBase.ts` | Abstrakte Basisklasse mit der gesamten Logik |
+| `core/someOption.ts` | `Some`-Variante (hält `value`) |
+| `core/noneOption.ts` | `None`-Variante (gibt `undefined`) |
+| `core/option.ts` | Factories (`Some`, `None`, `Option`) + JSON/Conversion-Helper |
+
+#### Konzept
+Klassische Rust-Option-Portierung. Diskriminierung über `isSome`/`isNone` und die abstrakte Methode `getValue(): T | undefined`. `OptionBase` implementiert das gesamte Verhalten, indem es `getValue()` befragt — `SomeOption`/`NoneOption` liefern den Wert.
+
+#### Beobachtungen
+
+**Positiv**
+- Saubere Trennung: Interface ↔ abstrakte Basis ↔ konkrete Varianten ↔ Factories
+- Reichhaltige API (`unwrapOr*`, `map*`, `and*`, `or*`, `match`, `filter`, `toArray`)
+- `Some(value)` validiert gegen `null`/`undefined` und wirft `Exception`
+- Konventionskonforme Struktur
+
+**Kritische Findings**
+
+- **F-12** **Fundamentale Designschwäche: `T extends undefined` ist nicht modellierbar.** Die gesamte Logik unterscheidet `Some` und `None` ausschließlich über `getValue() === undefined`. Eine `IOption<undefined>` kann nie `Some(undefined)` halten. Anti-Pattern: der Sentinel-Wert ist auch ein gültiger Domain-Wert. Konkrete Bug-Folge in `optionBase.ts`:
+  ```typescript
+  unwrap(): T {
+      const value = this.getValue();
+      if (value !== undefined) return value;
+      throw new Exception('Called unwrap on a None value');
+  }
+  ```
+  Wenn `T = number | undefined` und der Konsument irgendwie eine `Some(undefined)` hat (z.B. via `toOption`), wird `unwrap()` fälschlicherweise werfen.
+  **Fix-Pfad:** Discrimination über `this.isSome` (existiert bereits) statt `value !== undefined`.
+
+- **F-13** `toOption` ist semantisch überladen:
+  - Bei JSON-String → parsen, dann rekursiv
+  - Bei Array → Array von Options (mit `as any`-Cast)
+  - Bei Objekt → Plain-Objekt mit Option-gewrappten Properties
+  - Bei `{ isSome, isNone, value }` → als serialisierte Option behandeln
+  Signatur `(value: unknown) => IOption<T>` lügt: gibt im Array-/Objekt-Fall **kein** `IOption<T>` zurück. `!value`-Check (Zeile 48) behandelt `0`/`''`/`false` als "leer". `isJsonString`-Heuristik kann zu unerwarteten `JSON.parse`-Würfen führen (kein try/catch).
+
+- **F-14** Round-Trip `toOption(toJsonString(opt))` nicht verlustfrei (siehe F-13).
+
+- **F-15** Freistehende Funktionen `toJsonObject`/`toJsonString`/`toOption` neben dem `Option`-Namespace. Inkonsistent zur Namespace-Idee.
+
+- **F-16** `SomeOption`/`NoneOption`-Klassen werden im Barrel re-exportiert. Konsumenten können `new SomeOption(x)` schreiben und so die `null`/`undefined`-Validierung umgehen.
+
+- **F-17** `isOption`-Guard ist heuristisch und zu lax:
+  ```typescript
+  'isSome' in option && 'isNone' in option && ('value' in option || option.isSome === false)
+  ```
+  Akzeptiert jedes Plain-Objekt mit dieser Form. Korrekter wäre `instanceof OptionBase`. Die strukturelle Variante ist nur sinnvoll, wenn Cross-Realm (Worker/Postmessage) ein echter Use-Case ist.
+
+- **F-18** Inkonsistenz zwischen Rückgabetyp der Factories (`IOption<T>`) und Predicate des Guards (`OptionBase<T>`). Der Guard leakt die Implementierung.
+
+- **F-19** `getValue()` ist faktisch Teil der Public-API (wird von `toJsonObject` aufgerufen), steht aber nicht im `IOption`-Interface.
+
+- **F-20** `&&`-Hack in `onSome`/`onNone` (Zeile 78, 83):
+  ```typescript
+  value !== undefined && fn(value);
+  ```
+  Triggert `eslint-disable @typescript-eslint/no-unused-expressions`. Stilfrage.
+
+- **F-21** **Keine Tests.** Besonders schmerzhaft, weil `option/` Fundament für `result/`, `callback/` ist.
+
+- **F-22** `AsOptional<T, K>` (Type-Helper) hat inhaltlich nichts mit `Option<T>` zu tun. Liegt im falschen Feature.
+
+- **F-23** Dependency `option/` → `exceptions/` (für `unwrap()`-Wurf). Architektonisch fragwürdig: Option ist die fundamentalere Abstraktion. Alternative: native `Error` werfen — siehe F-37 für Gesamteinordnung.
+
+- **F-24** Path-Alias-Inkonsistenz: `Exception` wird via `timi-essentials:exceptions` importiert, `IOption` via relativem `'../models/IOption'`. Mischmuster.
+
+- **F-25** ESLint-Disable-Häufung über mehrere Dateien des Features. Strukturell, weil eine Option-Implementierung per Definition mit `undefined` arbeitet. Sollte über `eslint.config.js`-Override für `option/**` gelöst werden statt File-Level-Disables.
+
+---
+
+### 3.4 Feature `result/`
+
+#### Inhalt
+
+| Datei | Rolle |
+|---|---|
+| `index.ts` | Re-Exports (Interface, Guard, Factories, beide Klassen) |
+| `models/IResult.ts` | Interface mit ~15 Methoden |
+| `guards/isResult.ts` | Strukturelle Type-Guard |
+| `core/resultBase.ts` | Abstrakte Basisklasse mit gesamter Logik |
+| `core/okResult.ts` | `Ok`-Variante (hält `value`) |
+| `core/errResult.ts` | `Err`-Variante (hält `error: Exception`) |
+| `core/result.ts` | Factories `Ok`, `Err`, `Result.from`, `Result.fromAsync` |
+
+#### Konzept
+Klassische Rust-Result-Portierung. **Diskriminierung über `isOk`/`isErr`** (anders als Option, die über `value !== undefined` diskriminiert — siehe F-12). Fehlertyp ist **fest verdrahtet auf `Exception`** (nicht generisch wie `Result<T, E>` in Rust).
+
+#### Beobachtungen
+
+**Positiv**
+- Bessere Discrimination als Option: `resultBase` nutzt `this.isOk`/`this.isErr` statt `value !== undefined`. Robust auch bei `T = undefined` oder `T = null`. Genau das Pattern, das Option **nicht** hat.
+- `Result.from`/`fromAsync` mit sinnvollem Wrap auf `Exception` (keine Doppelverpackung)
+- Konsumentenseitig sauber: `result.match(value => ..., error => ...)`
+- Konventionskonforme Struktur
+
+**Kritische Findings**
+
+- **F-26** Fehlertyp hart auf `Exception`. Kein generisches `Result<T, E>`. **Bewusste Entscheidung** (siehe Abschnitt 9) — wird als Konvention dokumentiert.
+
+- **F-27** `ok()` und `err()` sind doppeldeutig: Accessor _und_ Werfer:
+  ```typescript
+  // In OkResult:
+  ok(): T { return this.value; }
+  err(): Exception { throw new Exception('The Result object isnt in a error state'); }
+  ```
+  `IResult.ok(): T` ist nominell ein Accessor, kann aber werfen. Möglichkeit eines Wurfs nicht im Typ kommuniziert. In `resultBase.ts` führt das zu überflüssigen `as T` / `as Exception`-Casts.
+
+- **F-28** Tippfehler in Error-Messages:
+  - `okResult.ts:17`: `'The Result object isnt in a error state'` (fehlendes Apostroph + sollte "in an" sein)
+  - `errResult.ts:13`: `"The Result object isn't in a ok state"` (sollte "in an ok" sein)
+
+- **F-29** `unwrap()`-Message verliert Stack-Trace:
+  ```typescript
+  throw new Exception(`Called unwrap on an Err value: ${this.err()}`);
+  ```
+  `this.err()` wird via Template-String stringifiziert; Stack-Trace und Exception-Subtyp gehen verloren.
+
+- **F-30** `expect()`/`expectErr()` werfen `Exception`, nicht den Originalfehler. Original-`Exception` wird zu String degradiert, neu verpackt — Stack-Trace und Exception-Subtyp (z.B. `NotFoundException`) gehen verloren. Schmerzhaft beim Debuggen.
+
+- **F-31** `isResult`-Predicate behauptet `value & error` gleichzeitig:
+  ```typescript
+  result is ResultBase<T> & { value: T; error: Exception }
+  ```
+  Niemals wahr (entweder Ok oder Err). Strukturell statt nominal. Predicate-Typ leakt `ResultBase`.
+
+- **F-32** `ErrResult<T>` mit Phantom-`T` (nirgends verwendet außer für Interface-Implementierung). `T = never` als Default in `Err = <T = never>(...)` ist clever (Assignment zu jedem `Result<T>` möglich). Aber: Klasse im Barrel exportiert (siehe F-40) — Konsument könnte `new ErrResult<string>(err)` schreiben, was verwirrend ist.
+
+- **F-33** `Result.from` reduziert non-Error-Würfe (`throw 'string'` etc.) via `String(error)` zur Message. Strukturierte Information geht verloren. Vertretbar, aber dokumentationsbedürftig.
+
+- **F-34** `Result.fromAsync` nutzt `.then()/.catch()` statt `try/await/catch`. Asymmetrie zu `Result.from`. Stilfrage.
+
+- **F-35** API-Asymmetrie zwischen Option und Result:
+  | Konzept | Option | Result |
+  |---|---|---|
+  | Filter | `filter(predicate)` | – |
+  | To-Array | `toArray()` | – |
+  | To-String | `toString()` | – |
+
+  Result fehlt `filter` (konzeptionell schwierig), aber auch `toString` und `toArray`. Wirkt wie zwei Iterationen.
+
+- **F-36** Fehlende Konversion Result↔Option. In Rust: `Result::ok() -> Option<T>`, `Result::err() -> Option<E>`. Hier heißen die Methoden zwar genauso, machen aber etwas völlig anderes (siehe F-27). **Stolperstein für Rust-Kenner.**
+
+- **F-37** Dependency `result/` → `exceptions/`. `IResult` selbst importiert `Exception`. Zusammen mit F-23 (Option → Exception) — kein Zyklus, weil `exceptions/` nichts zurückimportiert (verifiziert in Schritt 3.5). Coupling akzeptiert.
+
+- **F-38** Path-Alias-Inkonsistenz (selbe Beobachtung wie bei Option, siehe F-24).
+
+- **F-39** **Keine Tests.**
+
+- **F-40** `OkResult`/`ErrResult`-Klassen im Barrel exportiert. Selbe Inkonsistenz wie F-16 für Option.
+
+---
+
+### 3.5 Feature `exceptions/`
+
+#### Inhalt
+
+| Datei | Rolle |
+|---|---|
+| `index.ts` | Re-Exports aller 9 Untermodule (alphabetisch) |
+| `models/IException.ts` | Minimal-Interface: `Error` + `info: string` |
+| `core/exception.ts` | Basisklasse `Exception extends Error`, mit `info`, `cause`, `toJSON`, `fromError` |
+| `core/badRequestException.ts` | Subklasse, `info='BAD_REQUEST'` |
+| `core/unauthorizedException.ts` | Subklasse, `info='UNAUTHORIZED'`, Default-Message |
+| `core/forbiddenException.ts` | Subklasse, `info='FORBIDDEN'`, Default-Message |
+| `core/notFoundException.ts` | Subklasse, `info='NOT_FOUND'` |
+| `core/conflictException.ts` | Subklasse, `info='CONFLICT'`, Default-Message |
+| `core/internalServerErrorException.ts` | Subklasse, `info='INTERNAL_SERVER_ERROR'`, Default-Message |
+| `core/serviceUnavailableException.ts` | Subklasse, `info='SERVICE_UNAVAILABLE'`, Default-Message |
+| `core/httpStatusExceptionFactory.ts` | Klasse mit `static createFromStatus(status, message)` |
+
+#### Konzept
+HTTP-Statuscode-zentrierte Exception-Hierarchie mit `info`-Tag (machine-readable Code). Basisklasse erweitert nativ `Error`, mit `cause`-Support und custom `toJSON`. Subklassen sind nahezu identisch.
+
+#### Dependency-Status
+`exceptions/` importiert **nichts** aus `option/`, `result/`, `callback/`, `check/`, `timer/`. **Kein Zyklus** (Sorge aus F-23/F-37 entkräftet).
+
+#### Beobachtungen
+
+**Positiv**
+- Saubere Vererbungs-Hierarchie: `Error` → `Exception` → spezifische Subklassen
+- `Object.setPrototypeOf(this, new.target.prototype)` in der Basis und `Object.setPrototypeOf(this, XException.prototype)` in jeder Subklasse — korrekter Workaround für TypeScript-`extends Error`-Bug bei kompilierten Targets ≤ ES2015. Defensiv und richtig.
+- `fromError` mit Stack-Trace-Erhaltung
+- `HttpStatusExceptionFactory` zentralisiert die Status→Exception-Mapping-Logik
+- `info`-Tag als machine-readable Code sinnvoll
+- `cause`-Support (intern) folgt ES2022-Standard
+
+**Kritische Findings**
+
+- **F-41** `cause` wird **nicht** an `Error` weitergereicht:
+  ```typescript
+  constructor(message?: string, options?: { cause?: unknown }) {
+      super(message);  // ← options.cause wird NICHT an super weitergereicht
+      this.options = options;
+      ...
+  }
+  ```
+  Konsequenz: `exception.cause` (Standard-API) ist `undefined`. Tools wie Devtools, Pino, Sentry, die nach `error.cause` suchen, finden nichts.
+  **Fix:** `super(message, options)` aufrufen. Dann ist `this.cause` automatisch verfügbar.
+
+- **F-42** `options`-Feld redundant zur Native-API. Wenn F-41 gefixt wird, entfällt das ganze Feld.
+
+- **F-43** `info` über `protected setInfo()` — ungewöhnliches Pattern. `protected _info` mit `info`-Getter und `setInfo`-Setter ist Java/C#-Reflex. In TypeScript holpriger, aber pragmatisch funktional.
+
+- **F-44** Massive Code-Duplikation in 7 Subklassen (~77 Zeilen Boilerplate). **Bewusste Entscheidung** (siehe Abschnitt 9): bleibt als eigenständige Klassen wegen `instanceof`-Checks.
+
+- **F-45** Inkonsistente Default-Messages:
+  | Subklasse | Default |
+  |---|---|
+  | `BadRequestException` | – |
+  | `UnauthorizedException` | `'Unauthorized'` |
+  | `ForbiddenException` | `'Forbidden'` |
+  | `NotFoundException` | – |
+  | `ConflictException` | `'Conflict'` |
+  | `InternalServerErrorException` | `'Internal Server Error'` |
+  | `ServiceUnavailableException` | `'Service Unavailable'` |
+
+  `BadRequest` und `NotFound` haben **keinen** Default ohne erkennbaren Grund.
+
+- **F-46** `HttpStatusExceptionFactory` als Klasse mit ausschließlich statischen Methoden — Anti-Pattern in TS. Eine reine Funktion `createFromHttpStatus` wäre direkter.
+
+- **F-47** Status-Mapping unvollständig. Fehlend (Auswahl): `402`, `405`, `408`, `410`, `415`, `422`, `429`, `501`, `502`, `504`. Default fällt auf generische `Exception` mit `info='UNKNOWN_ERROR'` — HTTP-Semantik geht verloren.
+
+- **F-48** Keine Bidirektionalität: kein `getHttpStatus()` auf der Exception. Error-Handler in `timi-api/` muss `instanceof XException`-Switching machen.
+  **Verbesserungs-Idee:** `static readonly httpStatus: number = 404` pro Subklasse — Error-Handler kann generisch mappen.
+
+- **F-49** `toJSON` exposed `_info` statt `info` — **API-Vertragsbruch**:
+  ```typescript
+  toJSON(): Record<string, unknown> {
+      return {
+          name: this.name,
+          message: this.message,
+          _info: this._info,    // ← Konsumenten sehen `_info`, nicht `info`
+          stack: this.stack,
+          cause: this.options?.cause,
+      };
+  }
+  ```
+  Der Public-Getter heißt `info`, die JSON-Form aber `_info`. Frontend-Konsumenten bekommen falsches Feldname.
+
+- **F-50** `toJSON` enthält `stack` — **Sicherheitsrisiko in Production**. Information disclosure: Pfade, Versionen, interner Code werden Angreifern preisgegeben (OWASP-Anti-Pattern). Stack-Trace gehört in Logs, nicht in HTTP-Responses.
+
+- **F-51** Drei `eslint-disable` ohne Begründung am Kopf von `exception.ts` (`no-undefined`, `no-restricted-syntax`, `@typescript-eslint/no-restricted-types`). Audit erforderlich.
+
+- **F-52** Inkonsistente Formatierung Basis vs. Subklassen:
+  ```typescript
+  // exception.ts:
+  options?: { cause?: unknown }    // mit Leerzeichen
+  // Subklassen:
+  options?: {cause?: unknown}      // ohne Leerzeichen
+  ```
+  Prettier-Frage.
+
+- **F-53** **Keine Tests.**
+
+- **F-54** `Exception.fromError` mutiert `stack` (legitim, aber undokumentiert). Stack-Manipulation ist legitim, aber dokumentationsbedürftig.
+
+---
+
+## 4. Konsolidierte Findings-Liste
+
+### Bugs (konkrete Falsch-Funktion)
+
+| ID | Feature | Schwere | Beschreibung |
+|---|---|---|---|
+| F-08 | callback | **hoch** | `executeOr` gibt args nicht an Fallback weiter |
+| F-12 | option | **hoch** | `T extends undefined` nicht modellierbar |
+| F-41 | exceptions | **hoch** | `cause` nicht an Native-Error weitergereicht |
+| F-49 | exceptions | **hoch** | `toJSON` exposed `_info` statt `info` (API-Vertragsbruch) |
+| F-50 | exceptions | **hoch** | `toJSON` enthält `stack` (Security-Risiko) |
+| F-06 | callback | mittel | `execute()` Typ-Lüge bei totem Branch |
+| F-07 | callback | mittel | `handover()` Typ-Lüge |
+| F-13 | option | mittel | `toOption` Signatur lügt |
+| F-14 | option | mittel | Round-Trip nicht verlustfrei |
+| F-29 | result | mittel | `unwrap()` verliert Stack-Trace |
+| F-30 | result | mittel | `expect`/`expectErr` degradieren Original-Exception |
+| F-31 | result | niedrig | `isResult`-Predicate behauptet Unmögliches |
+
+### Design-/Architektur-Fragen
+
+| ID | Feature | Beschreibung |
+|---|---|---|
+| F-03 | root | `export *` vs. explizite Re-Exports |
+| F-22 | option | `AsOptional` gehört nicht zum Option-Feature |
+| F-23 / F-37 | option/result | Dependency auf `exceptions` (akzeptiert) |
+| F-26 | result | Fehlertyp hart auf `Exception` (akzeptiert) |
+| F-27 | result | `ok()`/`err()` als Accessor+Werfer |
+| F-35 | result | API-Asymmetrie zu Option |
+| F-36 | result | Fehlende Konversion Result↔Option |
+| F-44 | exceptions | Code-Duplikation in 7 Subklassen (akzeptiert) |
+| F-47 | exceptions | Status-Mapping unvollständig |
+| F-48 | exceptions | Keine Bidirektionalität Exception → HTTP-Status |
+
+### Konventions-/Konsistenz-Verstöße
+
+| ID | Feature | Beschreibung |
+|---|---|---|
+| F-09 | callback | Redundanz `_callback` ⇄ `_hasCallback` |
+| F-10 | callback | `from`-Signatur ohne `null` |
+| F-15 | option | `toJsonObject`/`toJsonString`/`toOption` freistehend |
+| F-16 | option | `SomeOption`/`NoneOption` im Barrel |
+| F-17 | option | `isOption` heuristisch + leakt Implementierung |
+| F-18 | option | Inkonsistenz `IOption` vs. `OptionBase` |
+| F-19 | option | `getValue()` faktisch public, nicht im Interface |
+| F-32 | result | `ErrResult<T>` Phantom-Type |
+| F-40 | result | `OkResult`/`ErrResult` im Barrel |
+| F-43 | exceptions | `setInfo()`-Pattern unüblich |
+| F-45 | exceptions | Inkonsistente Default-Messages |
+| F-46 | exceptions | Statische Klasse als Anti-Pattern |
+
+### Stil / Kosmetik
+
+| ID | Beschreibung |
+|---|---|
+| F-02 | Fehlendes Semikolon Root `index.ts` |
+| F-20 | `&&`-Hack in `onSome`/`onNone` |
+| F-28 | Tippfehler in Result-Error-Messages |
+| F-33 | `Result.from` reduziert non-Error-Würfe |
+| F-34 | `Result.fromAsync` Stil-Asymmetrie |
+| F-42 | `options`-Feld redundant zur Native-API |
+| F-52 | Inkonsistente Formatierung in exceptions/ |
+| F-54 | `Exception.fromError` mutiert `stack` undokumentiert |
+
+### ESLint / Konventions-Setup
+
+| ID | Beschreibung |
+|---|---|
+| F-01 / F-24 / F-38 | Path-Alias-Inkonsistenz |
+| F-04 | Kollisionsrisiko bei `export *` |
+| F-05 | callback: 4× `eslint-disable` ohne Begründung |
+| F-25 | option: ESLint-Disable-Häufung |
+| F-51 | exceptions: 3× `eslint-disable` ohne Begründung |
+
+### Test-Strategie
+
+| ID | Beschreibung |
+|---|---|
+| F-11, F-21, F-39, F-53 | **Keine Tests in der gesamten Library** |
+
+---
+
+## 5. Priorisierung
+
+### P0 (sofort: Bugs mit Außenwirkung)
+
+1. **F-50** `toJSON` leakt Stack-Trace → Sicherheitsproblem in Production
+2. **F-49** `toJSON` exposed `_info` → Frontend-Konsumenten bekommen falsches Feldname
+3. **F-41** `cause` wird nicht an `Error.cause` durchgereicht
+4. **F-08** `Callback.executeOr` ignoriert args
+
+### P1 (kurzfristig: Bugs mit Debugging-Schmerz)
+
+5. **F-29 + F-30** Result `unwrap`/`expect` verlieren Stack-Trace
+6. **F-12** Option-Discrimination via `undefined` (latent)
+7. **F-06 + F-07** Callback Typ-Lügen (manifestiert kaum)
+
+### P2 (mittelfristig: Konventions-Aufräumung)
+
+8. **F-15 + F-16 + F-40** Barrel-Aufräumung
+9. **F-42** `options`-Feld entfernen sobald F-41 gefixt
+10. **F-13** `toOption` aufspalten oder dokumentieren
+11. **F-22** `AsOptional` umbenennen oder verschieben
+
+### P3 (langfristig: Architektur)
+
+12. **F-36** Result↔Option-Konversion
+13. **F-47 + F-48** Status-Mapping vervollständigen + bidirektional
+
+### Quer durch alles
+
+14. **F-11/F-21/F-39/F-53** Test-Strategie (siehe Abschnitt 6)
+
+---
+
+## 6. Test-Strategie
+
+### Status quo
+- Keine Test-Dependencies
+- Keine `*.test.ts` / `*.spec.ts`
+
+### Empfehlung: Vitest
+
+**Begründung**
+- ESM-nativ (passt zu `"type": "module"`)
+- Path-Alias-Support out-of-the-box
+- Schnell, watch-mode, gute TS-Integration ohne Babel
+
+### Test-Reihenfolge nach Risiko/Nutzen
+
+| Phase | Feature | Begründung |
+|---|---|---|
+| 1 | `exceptions` | Fundament; nach F-41/F-49/F-50-Fixes Tests **zuerst** |
+| 2 | `option` | Kern-Monade; F-12 lässt sich durch Tests sichtbar machen |
+| 3 | `result` | Symmetrisch zu Option; F-29/F-30 als Test-Cases |
+| 4 | `callback` | Klein; F-08 als ersten Test |
+| 5 | `check` / `timer` | übersprungen, separat zu klären |
+
+### Test-Coverage-Ziele
+
+- Unit-Tests pro Methode (besonders `match`/`map`/`andThen`-Kombinationen)
+- Property-Based-Tests via `fast-check`: Monaden-Gesetze
+- Snapshot für `toJSON` (Wire-Format-Stabilität)
+- Round-Trip-Tests: `toOption(toJsonString(opt))` (deckt F-14 auf)
+
+### Test-Datei-Konvention
+
+**Co-located**: `src/option/core/option.test.ts` (festgelegt, siehe Abschnitt 9)
+
+---
+
+## 7. Vorgeschlagene `.rules/`-Dateien
+
+| Datei | Trigger-Findings | Inhalt |
+|---|---|---|
+| `option-implementation.md` | F-25, F-12 | Option darf `undefined`/`null`/`no-restricted-types` ESLint-Regeln umgehen — als Override-Section, nicht per Datei-Disable |
+| `barrel-exports.md` | F-15, F-16, F-40 | Welche Symbole sind Public API? Implementierungsklassen wie `OkResult`/`SomeOption` gehören **nicht** ins Barrel |
+| `intra-feature-imports.md` | F-01, F-24, F-38 | Innerhalb eines Features: relative Pfade. Cross-Feature: Workspace-Alias |
+| `exception-cause-handling.md` | F-41, F-42 | `cause` muss an Native-`Error` weitergereicht werden; eigene `options`-Felder sind verboten |
+| `exception-tojson.md` | F-49, F-50 | `toJSON` darf keine Stack-Traces ausliefern; Feldnamen müssen mit Public-Gettern übereinstimmen |
+| `result-error-type.md` | F-26 | Dokumentiert die bewusste Fixierung auf `Exception` als Fehlertyp |
+| `eslint-disable-comments.md` | F-05, F-25, F-51 | Jeder `eslint-disable` braucht Kommentar mit Begründung — oder Override-Section |
+
+---
+
+## 8. Sprint-Plan
+
+### 🔴 Sprint 1 — P0-Bugs + Test-Setup
+
+**Ziel:** Sicherheit + Vertragsbruch beheben, Test-Infrastruktur einsatzbereit.
+
+| # | Aktion | Findings | Dateien |
+|---|---|---|---|
+| 1 | Vitest einrichten: `vitest`, `@vitest/coverage-v8` als `devDependencies`; `vitest.config.ts` mit Path-Alias-Resolution für `timi-essentials:*`; Script `"test": "vitest"`; `tsconfig.json` exclude für `*.test.ts` | F-21 | `package.json`, `vitest.config.ts`, `tsconfig.json` |
+| 2 | `.rules/exception-tojson.md` abstimmen (kein Stack im JSON, Feldname `info` statt `_info`, optional dev-Mode-Toggle) | F-50, F-49 | neu |
+| 3 | `Exception.toJSON` fixen: `stack` entfernen (oder hinter NODE_ENV-Guard), `_info` → `info` | F-50, F-49 | `exceptions/core/exception.ts` |
+| 4 | `.rules/exception-cause-handling.md` abstimmen (`cause` an Native-Error-Konstruktor; `options`-Feld entfällt) | F-41, F-42 | neu |
+| 5 | `Exception`-Konstruktor: `super(message, options)`; privates `options`-Feld entfernen; `toJSON` nutzt direkt `this.cause` | F-41, F-42 | `exceptions/core/exception.ts` |
+| 6 | `Callback.executeOr` fixen: `orExecute(...args)` statt `orExecute()` | F-08 | `callback/core/callback.ts` |
+| 7 | Test-Suite `exception.test.ts`: instanceof-Chain, cause-Durchreichen, toJSON-Snapshot, fromError-Stack-Erhalt | – | `exceptions/core/exception.test.ts` |
+| 8 | Test-Suite `callback.test.ts`: `executeOr` mit args, `from(undefined)`, `from(fn)` | F-08, F-11 | `callback/core/callback.test.ts` |
+
+**Nicht-Ziele:** Subklassen-Refactor, Path-Alias-Konvention, Option/Result-Tests.
+
+---
+
+### 🟡 Sprint 2 — P1-Bugs + Option/Result-Tests
+
+**Ziel:** Stack-Trace-Erhalt in Result, Option-Discrimination-Bug sichtbar machen, Kern-Monaden testabgedeckt.
+
+| # | Aktion | Findings | Dateien |
+|---|---|---|---|
+| 9 | Result `unwrap`/`expect`/`expectErr` so anpassen, dass die Original-`Exception` weitergereicht wird; `cause`-Chain prüfen | F-29, F-30 | `result/core/resultBase.ts` |
+| 10 | `result.test.ts`: `Ok`/`Err`, `map`, `andThen`, `match`, `unwrap` wirft Original, `Result.from`, `Result.fromAsync` | F-39 | `result/core/result.test.ts` |
+| 11 | `.rules/option-undefined-discrimination.md` abstimmen | F-12 | neu |
+| 12 | `option.test.ts`: alle `IOption`-Methoden + Edge-Cases inkl. `Some(0)`, `Some('')`, `Some(false)`, `Some<undefined>` | F-21 | `option/core/option.test.ts` |
+| 13 | F-12 fix: `OptionBase`-Methoden auf `this.isSome` umstellen | F-12 | `option/core/optionBase.ts` |
+| 14 | Callback Typ-Lügen aufräumen: tote Branches in `execute`/`handover` entfernen; `_hasCallback` als alleinige Wahrheitsquelle | F-06, F-07, F-09 | `callback/core/callback.ts` |
+
+---
+
+### 🟠 Sprint 3 — P2-Konventions-Aufräumung
+
+**Ziel:** Public API entrümpeln, ESLint-Setup auf Monaden-Realität anpassen, Tippfehler weg.
+
+| # | Aktion | Findings | Dateien |
+|---|---|---|---|
+| 15 | `.rules/barrel-exports.md` abstimmen: Implementierungsklassen nicht im Barrel | F-15, F-16, F-40 | neu |
+| 16 | `option/index.ts` und `result/index.ts` aufräumen | F-15, F-16, F-40 | beide `index.ts` |
+| 17 | `toJsonObject`/`toJsonString`/`toOption` in `Option`-Namespace einsortieren | F-15 | `option/core/option.ts` |
+| 18 | `.rules/eslint-overrides-for-monads.md` abstimmen: Override-Section für `option/**`; pro-Datei-Disables raus | F-25, F-05, F-51 | `eslint.config.js`, Cleanups |
+| 19 | Result-Tippfehler korrigieren | F-28 | `result/core/{okResult,errResult}.ts` |
+| 20 | `.rules/intra-feature-imports.md` abstimmen | F-01, F-24, F-38 | neu |
+| 21 | `Result.fromAsync` von `.then()/.catch()` auf `try/await/catch` umstellen | F-34 | `result/core/result.ts` |
+| 22 | Callback-Disables auditieren; nicht mehr triggernde entfernen | F-05 | `callback/core/callback.ts` |
+| 23 | `AsOptional` umbenennen zu `WithOptionalFields` (oder verschieben) | F-22 | `option/models/AsOptional.ts` + Konsumenten |
+| 24 | Tests für `check/`, `timer/` (sobald nachanalysiert) | F-21/F-39/F-53 | neu |
+
+---
+
+### 🔵 Sprint 4 — Backlog / Optional
+
+| # | Aktion | Findings | Begründung |
+|---|---|---|---|
+| 25 | `Option.toResult(error: Exception): IResult<T>` und `Result.toOption(): IOption<T>` ergänzen | F-36 | Komposition Option↔Result |
+| 26 | `HttpStatusExceptionFactory` ausbauen (422, 429, 405, 502, 504); evtl. zu freistehender Funktion | F-46, F-47 | nur wenn Konsumenten es brauchen |
+| 27 | `static readonly httpStatus` pro Subklasse → Error-Handler kann generisch mappen | F-48 | nur wenn Konsumenten viel `instanceof`-Switching machen |
+| 28 | `isOption` / `isResult` strikter (`instanceof OptionBase`) | F-17, F-31 | nur wenn Cross-Realm kein Use-Case |
+| 29 | `getValue()` als `protected` markieren; Konsumenten intern lösen | F-19 | sauberer Public-Vertrag |
+| 30 | `toOption` aufspalten oder dokumentieren als JSON-Roundtrip-Helper | F-13, F-14 | abhängig vom Use-Case |
+| 31 | `.DS_Store`-Cleanup + `.gitignore`-Eintrag | – | Hygiene |
+| 32 | Wurzel `index.ts` Semikolon Z.6 + Stil-Konsistenz | F-02 | Kosmetik |
+| 33 | Default-Messages in Exception-Subklassen vereinheitlichen | F-45 | API-Konsistenz |
+| 34 | Inkonsistente Formatierung Basis vs. Subklassen durch Prettier glätten | F-52 | Lint-Run |
+
+---
+
+## 9. Festgelegte Entscheidungen
+
+| Frage | Entscheidung |
+|---|---|
+| P0-Reihenfolge | Security (F-50) → Vertrag (F-49) → cause (F-41) → Callback (F-08) |
+| Result-Fehlertyp | `Exception` bleibt fix (kein generisches `Result<T, E>`-Refactor); dokumentiert via `.rules/result-error-type.md` |
+| Exception-Subklassen | Bleiben als eigenständige Klassen (für `instanceof`); Boilerplate (F-44) akzeptiert |
+| Test-Lage | Co-located (`option.test.ts` neben `option.ts`) |
+
+**Folgewirkung:** F-26, F-37, F-44 sind damit **geschlossen** als bewusste Designentscheidung. F-23 wird zu Stilfrage (Coupling Option → Exception akzeptiert).
+
+---
+
+## 10. Offene Punkte / Backlog
+
+- **`check/` und `timer/`** — von der Analyse übersprungen. Falls vor Migration noch zu prüfen, separat einplanen.
+- **Konsumenten-Anpassungen** — sobald Public-API-Symbole entfernt werden (z.B. `OkResult`-Klasse aus dem Barrel), müssen Konsumenten in den Vorgänger-Repos angepasst werden.
+- **CI-Integration** — Vitest landet in Sprint 1, GitHub-Actions-Hooks für das neue Repo separat einzurichten.
+- **Library-Veröffentlichung** — `package.json` ist aktuell `"private": true` mit `"version": "0.0.0"`. Vor Publishing: Versionsschema festlegen, ggf. Release-Tooling (Changesets, semantic-release) evaluieren.
+- **README, LICENSE, CONTRIBUTING** — für ein eigenständiges Repo erforderlich. LICENSE ist bereits vorhanden.
+
+---
+
+## Anhang: Schwere-Heuristik
+
+- **hoch** — Bug mit Außenwirkung (Security, API-Vertrag, Silent-Wrong-Behavior)
+- **mittel** — Bug mit Debugging-Schmerz oder Datenverlust unter Sonderbedingungen
+- **niedrig** — Strukturproblem ohne praktischen Schaden (z.B. unmögliches Predicate)

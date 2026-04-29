@@ -1,0 +1,17 @@
+{
+	"kbDir": ".rules",
+	"selfExplanatory": [
+		"import/order",
+		"import/no-duplicates",
+		"prefer-destructuring",
+		"@typescript-eslint/naming-convention",
+		"padding-line-between-statements",
+		"unused-imports/no-unused-imports",
+		"@typescript-eslint/no-unused-vars",
+		"@typescript-eslint/explicit-function-return-type",
+		"max-depth",
+		"jsdoc/require-jsdoc",
+		"react-hooks/exhaustive-deps",
+		"react/no-multi-comp"
+	]
+}

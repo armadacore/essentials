@@ -1,0 +1,63 @@
+{
+	"name": "@timi/essentials",
+	"version": "0.0.0",
+	"description": "Foundational TypeScript building blocks: Option, Result, Exception hierarchy, Callback wrapper, and small utilities.",
+	"type": "module",
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
+		}
+	},
+	"files": [
+		"dist",
+		"README.md",
+		"LICENSE"
+	],
+	"scripts": {
+		"build": "npm run clean && tsc -p tsconfig.json && tsc-alias -p tsconfig.json -f",
+		"dev": "concurrently \"tsc -p tsconfig.json --watch\" \"tsc-alias -p tsconfig.json -w -f\"",
+		"clean": "rm -rf dist",
+		"lint": "npm run lint:type && npm run lint:eslint",
+		"lint:type": "tsc --noEmit -p tsconfig.json",
+		"lint:eslint": "eslint . --quiet",
+		"lint:kb": "lintkb",
+		"format": "prettier --write \"src/**/*.ts\"",
+		"format:check": "prettier --check \"src/**/*.ts\""
+	},
+	"devDependencies": {
+		"@eslint/js": "^9.39.4",
+		"@stylistic/eslint-plugin": "^5.10.0",
+		"@types/node": "^24.12.2",
+		"concurrently": "^9.2.1",
+		"eslint": "^9.39.4",
+		"eslint-config-prettier": "^10.1.8",
+		"eslint-import-resolver-typescript": "^4.4.4",
+		"eslint-plugin-import": "^2.32.0",
+		"eslint-plugin-jsdoc": "^62.9.0",
+		"eslint-plugin-no-null": "^1.0.2",
+		"eslint-plugin-prefer-arrow": "^1.2.3",
+		"eslint-plugin-unused-imports": "^4.4.1",
+		"globals": "^17.4.0",
+		"lintkb": "^0.2.0",
+		"prettier": "^3.8.3",
+		"tsc-alias": "^1.8.16",
+		"typescript": "~5.7.0",
+		"typescript-eslint": "^8.58.0"
+	},
+	"engines": {
+		"node": ">=20"
+	},
+	"keywords": [
+		"option",
+		"result",
+		"exception",
+		"functional",
+		"typescript",
+		"monad"
+	],
+	"license": "SEE LICENSE IN LICENSE",
+	"private": true
+}

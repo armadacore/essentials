@@ -1,0 +1,17 @@
+.aws-sam
+.cache
+.vscode
+*.iml
+cdk.out
+coverage
+tsconfig.json
+**/compiled
+dist
+/src/graphql/__generated__
+
+# automatic generated changelogs
+CHANGELOG.md
+
+# Lighthouse reports
+.lighthouseci
+.lighthouseci/

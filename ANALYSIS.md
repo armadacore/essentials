@@ -481,13 +481,13 @@ HTTP-Statuscode-zentrierte Exception-Hierarchie mit `info`-Tag (machine-readable
 
 | ID | Feature | Schwere | Beschreibung |
 |---|---|---|---|
-| F-08 | callback | **hoch** | `executeOr` gibt args nicht an Fallback weiter |
+| F-08 | callback | **hoch** | ~~`executeOr` gibt args nicht an Fallback weiter~~ — **resolved (Sprint 1, Commit `9907cde`)**: `executeOr` reicht Spread-Args an Fallback weiter. |
 | F-12 | option | **hoch** | `T extends undefined` nicht modellierbar |
-| F-41 | exceptions | **hoch** | `cause` nicht an Native-Error weitergereicht |
-| F-49 | exceptions | **hoch** | `toJSON` exposed `_info` statt `info` (API-Vertragsbruch) |
-| F-50 | exceptions | **hoch** | `toJSON` enthält `stack` (Security-Risiko) |
-| F-06 | callback | mittel | `execute()` Typ-Lüge bei totem Branch |
-| F-07 | callback | mittel | `handover()` Typ-Lüge |
+| F-41 | exceptions | **hoch** | ~~`cause` nicht an Native-Error weitergereicht~~ — **resolved (Sprint 1, Commit `851ad0a`)**: `super(message, options)` reicht `cause` durch; `options`-Feld entfernt. |
+| F-49 | exceptions | **hoch** | ~~`toJSON` exposed `_info` statt `info` (API-Vertragsbruch)~~ — **resolved (Sprint 1, Commit `851ad0a`)**: JSON-Key heißt jetzt `info`. |
+| F-50 | exceptions | **hoch** | ~~`toJSON` enthält `stack` (Security-Risiko)~~ — **resolved (Sprint 1, Commit `851ad0a`)**: `stack` aus `toJSON` entfernt. |
+| F-06 | callback | mittel | ~~`execute()` Typ-Lüge bei totem Branch~~ — **resolved (Callback-Refactor, Commit `b7d3c24`)**: tote Branches durch strikten `IOption<T>`-State entfernt; `execute()` wirft jetzt `Exception` bei `none()`. |
+| F-07 | callback | mittel | ~~`handover()` Typ-Lüge~~ — **resolved (Callback-Refactor, Commit `b7d3c24`)**: `handover()` wirft jetzt `Exception` bei `none()`; kein Noop-Fallback mehr. |
 | F-13 | option | mittel | `toOption` Signatur lügt |
 | F-14 | option | mittel | Round-Trip nicht verlustfrei |
 | F-29 | result | mittel | `unwrap()` verliert Stack-Trace |
@@ -513,8 +513,8 @@ HTTP-Statuscode-zentrierte Exception-Hierarchie mit `info`-Tag (machine-readable
 
 | ID | Feature | Beschreibung |
 |---|---|---|
-| F-09 | callback | Redundanz `_callback` ⇄ `_hasCallback` |
-| F-10 | callback | `from`-Signatur ohne `null` |
+| F-09 | callback | ~~Redundanz `_callback` ⇄ `_hasCallback`~~ — **resolved (Callback-Refactor, Commit `b7d3c24`)**: interner State über `IOption<T>`, einzige Wahrheitsquelle. |
+| F-10 | callback | ~~`from`-Signatur ohne `null`~~ — **resolved (Callback-Refactor, Commit `b7d3c24`)**: `Callback.from(callback: T \| undefined)` delegiert an `Option.from(...)`, das `null \| undefined` einheitlich behandelt. |
 | F-15 | option | `toJsonObject`/`toJsonString`/`toOption` freistehend |
 | F-16 | option | `SomeOption`/`NoneOption` im Barrel |
 | F-17 | option | `isOption` heuristisch + leakt Implementierung |
@@ -641,37 +641,51 @@ HTTP-Statuscode-zentrierte Exception-Hierarchie mit `info`-Tag (machine-readable
 
 ## 8. Sprint-Plan
 
-### 🔴 Sprint 1 — P0-Bugs + Test-Setup
+### 🔴 Sprint 1 — P0-Bugs + Test-Setup ✅ abgeschlossen
 
 **Ziel:** Sicherheit + Vertragsbruch beheben, Test-Infrastruktur einsatzbereit.
 
-| # | Aktion | Findings | Dateien |
-|---|---|---|---|
-| 1 | Vitest einrichten: `vitest`, `@vitest/coverage-v8` als `devDependencies`; `vitest.config.ts` mit Path-Alias-Resolution für `timi-essentials:*`; Script `"test": "vitest"`; `tsconfig.json` exclude für `*.test.ts` | F-21 | `package.json`, `vitest.config.ts`, `tsconfig.json` |
-| 2 | `.rules/exception-tojson.md` abstimmen (kein Stack im JSON, Feldname `info` statt `_info`, optional dev-Mode-Toggle) | F-50, F-49 | neu |
-| 3 | `Exception.toJSON` fixen: `stack` entfernen (oder hinter NODE_ENV-Guard), `_info` → `info` | F-50, F-49 | `exceptions/core/exception.ts` |
-| 4 | `.rules/exception-cause-handling.md` abstimmen (`cause` an Native-Error-Konstruktor; `options`-Feld entfällt) | F-41, F-42 | neu |
-| 5 | `Exception`-Konstruktor: `super(message, options)`; privates `options`-Feld entfernen; `toJSON` nutzt direkt `this.cause` | F-41, F-42 | `exceptions/core/exception.ts` |
-| 6 | `Callback.executeOr` fixen: `orExecute(...args)` statt `orExecute()` | F-08 | `callback/core/callback.ts` |
-| 7 | Test-Suite `exception.test.ts`: instanceof-Chain, cause-Durchreichen, toJSON-Snapshot, fromError-Stack-Erhalt | – | `exceptions/core/exception.test.ts` |
-| 8 | Test-Suite `callback.test.ts`: `executeOr` mit args, `from(undefined)`, `from(fn)` | F-08, F-11 | `callback/core/callback.test.ts` |
+**Status:** Alle Aktionen abgeschlossen. Vitest läuft (`316f671`), Exception-Fixes umgesetzt (`851ad0a`), Callback `executeOr`-Bug behoben (`9907cde`). Zusätzlich wurde Callback komplett auf einen strikten Vertrag umgebaut (`b7d3c24`, siehe Anhang Callback-Refactor) — dieser Schritt war ursprünglich nicht in Sprint 1 vorgesehen, schließt aber die Findings F-06, F-07, F-09, F-10 mit. As-is-Tests für alle vier Features liegen vor (227 Tests, Coverage 99.5 %).
 
-**Nicht-Ziele:** Subklassen-Refactor, Path-Alias-Konvention, Option/Result-Tests.
+| # | Aktion | Findings | Dateien | Status |
+|---|---|---|---|---|
+| 1 | Vitest einrichten: `vitest`, `@vitest/coverage-v8` als `devDependencies`; `vitest.config.ts` mit Path-Alias-Resolution für `essentials:*`; Script `"test": "vitest"`; `tsconfig.json` exclude für `*.test.ts` | F-21 | `package.json`, `vitest.config.ts`, `tsconfig.json` | ✅ `316f671` |
+| 2 | `.rules/exception-tojson.md` abstimmen (kein Stack im JSON, Feldname `info` statt `_info`, optional dev-Mode-Toggle) | F-50, F-49 | neu | ⏭ übersprungen (direkt umgesetzt; `.rules`-Datei nachreichbar) |
+| 3 | `Exception.toJSON` fixen: `stack` entfernen (oder hinter NODE_ENV-Guard), `_info` → `info` | F-50, F-49 | `exceptions/core/exception.ts` | ✅ `851ad0a` |
+| 4 | `.rules/exception-cause-handling.md` abstimmen (`cause` an Native-Error-Konstruktor; `options`-Feld entfällt) | F-41, F-42 | neu | ⏭ übersprungen (direkt umgesetzt) |
+| 5 | `Exception`-Konstruktor: `super(message, options)`; privates `options`-Feld entfernen; `toJSON` nutzt direkt `this.cause` | F-41, F-42 | `exceptions/core/exception.ts` | ✅ `851ad0a` |
+| 6 | `Callback.executeOr` fixen: `orExecute(...args)` statt `orExecute()` | F-08 | `callback/core/callback.ts` | ✅ `9907cde` |
+| 7 | Test-Suite `exception.test.ts`: instanceof-Chain, cause-Durchreichen, toJSON-Snapshot, fromError-Stack-Erhalt | – | `exceptions/core/exception.test.ts` | ✅ `316f671` (86 Tests insgesamt für exceptions) |
+| 8 | Test-Suite `callback.test.ts`: `executeOr` mit args, `from(undefined)`, `from(fn)` | F-08, F-11 | `callback/core/callback.test.ts` | ✅ `5b22001` (initial), `b7d3c24` (Rewrite für strikten Vertrag) |
+
+**Zusatz (außerhalb des ursprünglichen Sprint-1-Plans):**
+- As-is-Test-Suiten für `option/` (`df2f89c`, 76 Tests) und `result/` (`1565a6c`, 51 Tests) bereits in Sprint 1 angelegt — pinned Bugs (F-12, F-14, F-15, F-17, F-29, F-30) werden so dokumentiert und sind im Sprint 2 die Failing-Tests.
+- **Callback-Refactor** (`b7d3c24`): Der ursprüngliche Sprint-1-Vertrag war "fire and forget" (`execute()` returnt `void | Promise<void>`, läuft Noop bei `none()`). Auf Wunsch des Users wurde das ersetzt durch einen strikten Vertrag analog zu `Option.unwrap` / `Result.unwrap`. Konkrete Änderungen:
+  - Generic-Constraint geöffnet auf `T extends (...args: any[]) => any` (Callbacks dürfen jetzt Daten zurückgeben).
+  - `Callback.create(fn)` und `Callback.none()` als explizite State-Konstruktoren analog zu `Some` / `None` und `Ok` / `Err`. `Callback.from(fn)` bleibt der Smart-Konstruktor.
+  - `execute(...args): ReturnType<T>` und `handover(): T` werfen jetzt `Exception` (Basis) bei `none()`. Damit verschwinden die toten Branches und Typ-Lügen (F-06, F-07).
+  - `executeOr(or, ...args): ReturnType<T>` und `handoverOr(or): T` als nachsichtige Varianten analog zu `unwrapOr`.
+  - `exists()`-Methode ersetzt durch `hasCallback`-Getter (analog `Option.isSome`).
+  - Interner State über `IOption<T>` statt `T | undefined` — schließt `_callback`/`_hasCallback`-Redundanz (F-09) und respektiert die `no-undefined`-Regel ohne `eslint-disable`.
+
+**Nicht-Ziele (eingehalten):** Subklassen-Refactor, Path-Alias-Konvention, Option/Result-Tests (As-is-Tests sind dokumentierend, kein Verhaltens-Refactor).
 
 ---
 
-### 🟡 Sprint 2 — P1-Bugs + Option/Result-Tests
+### 🟡 Sprint 2 — P1-Bugs + Verhaltens-Fixes ⏳ in Vorbereitung
 
-**Ziel:** Stack-Trace-Erhalt in Result, Option-Discrimination-Bug sichtbar machen, Kern-Monaden testabgedeckt.
+**Ziel:** Stack-Trace-Erhalt in Result, Option-Discrimination-Bug fixen, pinned Bugs in den As-is-Tests durch das tatsächliche Verhalten ersetzen.
 
-| # | Aktion | Findings | Dateien |
-|---|---|---|---|
-| 9 | Result `unwrap`/`expect`/`expectErr` so anpassen, dass die Original-`Exception` weitergereicht wird; `cause`-Chain prüfen | F-29, F-30 | `result/core/resultBase.ts` |
-| 10 | `result.test.ts`: `Ok`/`Err`, `map`, `andThen`, `match`, `unwrap` wirft Original, `Result.from`, `Result.fromAsync` | F-39 | `result/core/result.test.ts` |
-| 11 | `.rules/option-undefined-discrimination.md` abstimmen | F-12 | neu |
-| 12 | `option.test.ts`: alle `IOption`-Methoden + Edge-Cases inkl. `Some(0)`, `Some('')`, `Some(false)`, `Some<undefined>` | F-21 | `option/core/option.test.ts` |
-| 13 | F-12 fix: `OptionBase`-Methoden auf `this.isSome` umstellen | F-12 | `option/core/optionBase.ts` |
-| 14 | Callback Typ-Lügen aufräumen: tote Branches in `execute`/`handover` entfernen; `_hasCallback` als alleinige Wahrheitsquelle | F-06, F-07, F-09 | `callback/core/callback.ts` |
+**Vorbedingung erfüllt:** As-is-Tests für `option/`, `result/` liegen bereits aus Sprint 1 vor. Pinned-Bug-Anpassungen folgen der HARTEN REGEL — jede einzelne Test-Änderung muss vorher abgestimmt werden.
+
+| # | Aktion | Findings | Dateien | Status |
+|---|---|---|---|---|
+| 9 | Result `unwrap`/`expect`/`expectErr` so anpassen, dass die Original-`Exception` weitergereicht wird (cause-Chain) | F-29, F-30 | `result/core/resultBase.ts`, `result/core/errResult.ts` | ⏳ pending |
+| 10 | Pinned-Bug-Tests in `result.test.ts` an neues Verhalten anpassen | F-29, F-30 | `result/core/result.test.ts` | ⏳ pending (HARTE REGEL: einzeln abstimmen) |
+| 11 | `.rules/option-undefined-discrimination.md` abstimmen | F-12 | neu | ⏳ pending |
+| 12 | F-12 fix: `OptionBase`-Methoden auf `this.isSome` umstellen | F-12 | `option/core/optionBase.ts` | ⏳ pending |
+| 13 | Pinned-Bug-Tests in `option.test.ts` an neues Verhalten anpassen | F-12 (und ggf. F-14, F-15) | `option/core/option.test.ts`, `optionBase.test.ts` | ⏳ pending (HARTE REGEL: einzeln abstimmen) |
+| 14 | ~~Callback Typ-Lügen aufräumen~~ — **vorgezogen in Sprint 1 (Commit `b7d3c24`)** | F-06, F-07, F-09 | `callback/core/callback.ts` | ✅ erledigt |
 
 ---
 
@@ -690,6 +704,7 @@ HTTP-Statuscode-zentrierte Exception-Hierarchie mit `info`-Tag (machine-readable
 | 21 | `Result.fromAsync` von `.then()/.catch()` auf `try/await/catch` umstellen | F-34 | `result/core/result.ts` |
 | 22 | Callback-Disables auditieren; nicht mehr triggernde entfernen | F-05 | `callback/core/callback.ts` |
 | 23 | `AsOptional` umbenennen zu `WithOptionalFields` (oder verschieben) | F-22 | `option/models/AsOptional.ts` + Konsumenten |
+| 24 | **`InvalidStateException` einführen** als Subklasse von `Exception`. Alle bisherigen `throw new Exception(...)` aus `Option.unwrap`, `Result.unwrap`/`expect`/`expectErr`/`ok`/`err`, `Callback.execute`/`handover` und `Some(null/undefined)` migrieren. Library-weit konsistent statt Basis-`Exception`. Pinned-Bug-Tests entsprechend mit-anpassen (HARTE REGEL: einzeln abstimmen). | – (übergreifend, von Callback-Refactor angestoßen) | `exceptions/core/invalidStateException.ts` (neu), Option/Result/Callback-Throw-Sites, alle zugehörigen Tests |
 
 ---
 
@@ -718,6 +733,9 @@ HTTP-Statuscode-zentrierte Exception-Hierarchie mit `info`-Tag (machine-readable
 | Result-Fehlertyp | `Exception` bleibt fix (kein generisches `Result<T, E>`-Refactor); dokumentiert via `.rules/result-error-type.md` |
 | Exception-Subklassen | Bleiben als eigenständige Klassen (für `instanceof`); Boilerplate (F-44) akzeptiert |
 | Test-Lage | Co-located (`option.test.ts` neben `option.ts`) |
+| **Callback-Vertrag** | Strikter Vertrag analog zu `Option`/`Result` (Variante A): `execute`/`handover` werfen `Exception` bei `none()`; `executeOr`/`handoverOr` als nachsichtige Varianten; `hasCallback` als Getter; explizite State-Konstruktoren `create` / `none` zusätzlich zum Smart-Konstruktor `from`. `tryExecute`/`tryHandover` bewusst weggelassen. Generic-Constraint geöffnet auf `(...args) => any`. |
+| **Callback-Throw-Typ (vorläufig)** | `Callback.execute`/`handover` werfen Basis-`Exception` (Status quo der Library, konsequent zu `Option.unwrap`/`Result.unwrap`). Eine library-weite Migration auf `InvalidStateException` ist als Sprint-3-Aufgabe (#24) eingeplant. |
+| **Test-Approval** | Pinned-Bug-Tests dürfen erst nach expliziter User-Bestätigung pro Test geändert werden. Gilt für alle Sprint-2+-Verhaltens-Fixes. |
 
 **Folgewirkung:** F-26, F-37, F-44 sind damit **geschlossen** als bewusste Designentscheidung. F-23 wird zu Stilfrage (Coupling Option → Exception akzeptiert).
 

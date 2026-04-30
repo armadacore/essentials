@@ -55,6 +55,15 @@ const httpStatusLookup: ReadonlyMap<number, IHttpExceptionConstructor> = new Map
 	]),
 );
 
+/**
+ * Factory that maps an HTTP status code to the matching
+ * {@link HttpStatusExceptionBase} subclass instance — without forcing
+ * callers through an `instanceof`-cascade or a `switch` over status
+ * codes.
+ *
+ * Backed by a registry of all known HTTP exception classes; unknown
+ * status codes degrade gracefully to a generic {@link Exception}.
+ */
 export class HttpStatusExceptionFactory {
 	/**
 	 * Creates the {@link HttpStatusExceptionBase} subclass that represents

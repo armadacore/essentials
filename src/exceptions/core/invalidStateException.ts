@@ -15,6 +15,7 @@ import { Exception } from './exception';
  * readable categorisation.
  */
 export class InvalidStateException extends Exception {
+	/** Defaults `message` to `'Invalid State'` and tags `info` as `'INVALID_STATE'`. */
 	constructor(message?: string, options?: { cause?: unknown }) {
 		super(message || 'Invalid State', options);
 		this.name = 'InvalidStateException';

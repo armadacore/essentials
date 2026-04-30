@@ -3,7 +3,7 @@
  
 /* eslint-disable no-null/no-null */
 import { describe, expect, it } from 'vitest';
-import { Exception } from 'essentials:exceptions';
+import { InvalidStateException } from 'essentials:exceptions';
 import { None, Option, Some, toJsonObject, toJsonString, toOption } from 'essentials:option';
 import { NoneOption } from './noneOption';
 import { OptionBase } from './optionBase';
@@ -15,17 +15,14 @@ import { SomeOption } from './someOption';
  * Several assertions intentionally pin known bugs / API quirks from
  * `ANALYSIS.md`. Do NOT change them without explicit approval:
  *
- *  - F-12: `value !== undefined` is used as the Some/None discriminator
- *          everywhere. A `Some<undefined>` (e.g. produced via `.map()`)
- *          would behave like None.
  *  - F-15: {@link toOption} treats every falsy primitive (0, '', false)
  *          as None.
  *  - F-14: {@link toJsonObject} represents None as `{ isSome: false,
- *          isNone: true, value: undefined }` \u2014 the `value` key
+ *          isNone: true, value: undefined }` — the `value` key
  *          disappears when run through `JSON.stringify`, which is part
  *          of why round-tripping is lossy for `Some<falsy>`.
- *  - {@link Some} throws an {@link Exception} when called with `null`
- *          or `undefined`.
+ *  - {@link Some} throws an {@link InvalidStateException} when called
+ *          with `null` or `undefined`.
  */
 describe('Option (as-is behaviour)', () => {
 	describe('Some / None constructors', () => {
@@ -47,13 +44,13 @@ describe('Option (as-is behaviour)', () => {
 			expect(option.isNone).toBe(true);
 		});
 
-		it('Some(null) throws an Exception', () => {
-			expect(() => Some<unknown>(null)).toThrow(Exception);
+		it('Some(null) throws an InvalidStateException', () => {
+			expect(() => Some<unknown>(null)).toThrow(InvalidStateException);
 			expect(() => Some<unknown>(null)).toThrow('Cannot create Some with null or undefined');
 		});
 
-		it('Some(undefined) throws an Exception', () => {
-			expect(() => Some<unknown>(undefined)).toThrow(Exception);
+		it('Some(undefined) throws an InvalidStateException', () => {
+			expect(() => Some<unknown>(undefined)).toThrow(InvalidStateException);
 		});
 
 		it('Some accepts falsy non-nullish primitives', () => {
@@ -96,7 +93,7 @@ describe('Option (as-is behaviour)', () => {
 			// passing `null` with a truthy predicate hits the Some-throw.
 			expect(() =>
 				Option.fromPredicate<unknown>(null, () => true),
-			).toThrow(Exception);
+			).toThrow(InvalidStateException);
 		});
 	});
 

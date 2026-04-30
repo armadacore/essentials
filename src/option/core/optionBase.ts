@@ -1,5 +1,5 @@
 /* eslint-disable no-restricted-syntax, @typescript-eslint/no-restricted-types */
-import { Exception } from 'essentials:exceptions';
+import { InvalidStateException } from 'essentials:exceptions';
 import { type IOption } from '../models/IOption';
 import { None, Some } from './option';
 
@@ -11,7 +11,7 @@ export abstract class OptionBase<T> implements IOption<T> {
 
 	unwrap(): T {
 		if (this.isSome) return this.getValue() as T;
-		throw new Exception('Called unwrap on a None value');
+		throw new InvalidStateException('Called unwrap on a None value');
 	}
 
 	unwrapOr(defaultValue: T): T {
@@ -33,7 +33,7 @@ export abstract class OptionBase<T> implements IOption<T> {
 
 	expect(message: string): T {
 		if (this.isSome) return this.getValue() as T;
-		throw new Exception(message);
+		throw new InvalidStateException(message);
 	}
 
 	map<U>(fn: (value: T) => U): IOption<U> {

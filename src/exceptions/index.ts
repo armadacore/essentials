@@ -5,6 +5,7 @@ export * from './core/exception';
 export * from './core/forbiddenException';
 export * from './core/httpStatusExceptionFactory';
 export * from './core/internalServerErrorException';
+export * from './core/invalidStateException';
 export * from './core/notFoundException';
 export * from './core/serviceUnavailableException';
 export * from './core/unauthorizedException';

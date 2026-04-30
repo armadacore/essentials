@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-magic-numbers */
 import { describe, expect, it, vi } from 'vitest';
-import { Exception } from 'essentials:exceptions';
+import { InvalidStateException } from 'essentials:exceptions';
 import { None, Some } from './option';
 
 /**
@@ -14,8 +14,8 @@ describe('OptionBase API (as-is behaviour)', () => {
 			expect(Some(1).unwrap()).toBe(1);
 		});
 
-		it('throws an Exception for None', () => {
-			expect(() => None<number>().unwrap()).toThrow(Exception);
+		it('throws an InvalidStateException for None', () => {
+			expect(() => None<number>().unwrap()).toThrow(InvalidStateException);
 			expect(() => None<number>().unwrap()).toThrow('Called unwrap on a None value');
 		});
 	});
@@ -62,8 +62,8 @@ describe('OptionBase API (as-is behaviour)', () => {
 			expect(Some(1).expect('msg')).toBe(1);
 		});
 
-		it('throws Exception with the supplied message for None', () => {
-			expect(() => None<number>().expect('boom')).toThrow(Exception);
+		it('throws InvalidStateException with the supplied message for None', () => {
+			expect(() => None<number>().expect('boom')).toThrow(InvalidStateException);
 			expect(() => None<number>().expect('boom')).toThrow('boom');
 		});
 	});

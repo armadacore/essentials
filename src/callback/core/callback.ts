@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-restricted-types */
 /* eslint-disable @typescript-eslint/naming-convention */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Exception } from 'essentials:exceptions';
+import { InvalidStateException } from 'essentials:exceptions';
 import type { IOption } from 'essentials:option';
 import { None, Option, Some } from 'essentials:option';
 import type { ICallback } from '../models/ICallback';
@@ -16,13 +16,13 @@ import type { ICallback } from '../models/ICallback';
  * accept a fallback for the absent case.
  *
  *  - {@link Callback.execute} runs the registered callback and
- *    returns its result. Throws {@link Exception} when no callback
- *    is registered.
+ *    returns its result. Throws {@link InvalidStateException} when no
+ *    callback is registered.
  *  - {@link Callback.executeOr} runs the registered callback or
  *    the supplied fallback and always returns a value of the
  *    callback's return type.
  *  - {@link Callback.handover} returns the registered callback.
- *    Throws {@link Exception} when no callback is registered.
+ *    Throws {@link InvalidStateException} when no callback is registered.
  *  - {@link Callback.handoverOr} returns the registered callback
  *    or the supplied fallback.
  *  - {@link Callback.hasCallback} is the explicit pre-check, the
@@ -53,7 +53,7 @@ export class Callback<T extends (...args: any[]) => any> implements ICallback<T>
 
 	public execute(...args: Parameters<T>): ReturnType<T> {
 		if (this._callback.isNone) {
-			throw new Exception('Cannot execute Callback: no callback registered');
+			throw new InvalidStateException('Cannot execute Callback: no callback registered');
 		}
 
 		return this._callback.unwrap()(...args) as ReturnType<T>;
@@ -69,7 +69,7 @@ export class Callback<T extends (...args: any[]) => any> implements ICallback<T>
 
 	public handover(): T {
 		if (this._callback.isNone) {
-			throw new Exception('Cannot handover Callback: no callback registered');
+			throw new InvalidStateException('Cannot handover Callback: no callback registered');
 		}
 
 		return this._callback.unwrap();

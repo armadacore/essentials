@@ -699,12 +699,12 @@ HTTP-Statuscode-zentrierte Exception-Hierarchie mit `info`-Tag (machine-readable
 | 16 | `option/index.ts` und `result/index.ts` aufräumen | F-15, F-16, F-40 | beide `index.ts` |
 | 17 | `toJsonObject`/`toJsonString`/`toOption` in `Option`-Namespace einsortieren | F-15 | `option/core/option.ts` |
 | 18 | `.rules/eslint-overrides-for-monads.md` abstimmen: Override-Section für `option/**`; pro-Datei-Disables raus | F-25, F-05, F-51 | `eslint.config.js`, Cleanups |
-| 19 | Result-Tippfehler korrigieren | F-28 | `result/core/{okResult,errResult}.ts` |
+| 19 | ✅ **Erledigt (`0359309`):** Result-Tippfehler korrigiert (`isnt in a error state` → `isn't in an error state`; `isn't in a ok state` → `isn't in an ok state`). Test-Regexes mit-aktualisiert. | F-28 | `result/core/{okResult,errResult}.ts`, `result.test.ts` |
 | 20 | `.rules/intra-feature-imports.md` abstimmen | F-01, F-24, F-38 | neu |
-| 21 | `Result.fromAsync` von `.then()/.catch()` auf `try/await/catch` umstellen | F-34 | `result/core/result.ts` |
+| 21 | ✅ **Erledigt (`466f27a`):** `Result.fromAsync` von `.then()/.catch()` auf `try/await/catch` umgestellt — Stilkonsistenz mit `Result.from`. Verhalten unverändert (Tests bleiben grün). | F-34 | `result/core/result.ts` |
 | 22 | Callback-Disables auditieren; nicht mehr triggernde entfernen | F-05 | `callback/core/callback.ts` |
 | 23 | `AsOptional` umbenennen zu `WithOptionalFields` (oder verschieben) | F-22 | `option/models/AsOptional.ts` + Konsumenten |
-| 24 | **`InvalidStateException` einführen** als Subklasse von `Exception`. Alle bisherigen `throw new Exception(...)` aus `Option.unwrap`, `Result.unwrap`/`expect`/`expectErr`/`ok`/`err`, `Callback.execute`/`handover` und `Some(null/undefined)` migrieren. Library-weit konsistent statt Basis-`Exception`. Pinned-Bug-Tests entsprechend mit-anpassen (HARTE REGEL: einzeln abstimmen). | – (übergreifend, von Callback-Refactor angestoßen) | `exceptions/core/invalidStateException.ts` (neu), Option/Result/Callback-Throw-Sites, alle zugehörigen Tests |
+| 24 | ✅ **Erledigt:** `InvalidStateException` als Subklasse von `Exception` eingeführt (`info='INVALID_STATE'`, folgt `BadRequestException`-Pattern). Alle library-internen `throw new Exception(...)` migriert: `Option.unwrap`/`expect`, `Some(null/undefined)`-Guard, `Result.unwrap`/`expect`/`expectErr`, `OkResult.err`, `ErrResult.ok`, `Callback.execute`/`handover`. Tests entsprechend auf `InvalidStateException` geschärft. 227/227 grün. | – (übergreifend, von Callback-Refactor angestoßen) | `exceptions/core/invalidStateException.ts` (neu), `exceptions/index.ts`, Option/Result/Callback-Throw-Sites, alle zugehörigen Tests |
 
 ---
 

@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-magic-numbers */
 /* eslint-disable no-undefined */
 import { describe, expect, it, vi } from 'vitest';
-import { Exception } from 'essentials:exceptions';
+import { InvalidStateException } from 'essentials:exceptions';
 import { Callback } from './callback';
 
 /**
@@ -71,17 +71,17 @@ describe('Callback', () => {
 			expect(Callback.none().hasCallback).toBe(false);
 		});
 
-		it('execute throws Exception with a descriptive message', () => {
+		it('execute throws InvalidStateException with a descriptive message', () => {
 			const cb = Callback.none<() => void>();
 
-			expect(() => cb.execute()).toThrow(Exception);
+			expect(() => cb.execute()).toThrow(InvalidStateException);
 			expect(() => cb.execute()).toThrow(/no callback registered/u);
 		});
 
-		it('handover throws Exception with a descriptive message', () => {
+		it('handover throws InvalidStateException with a descriptive message', () => {
 			const cb = Callback.none<() => void>();
 
-			expect(() => cb.handover()).toThrow(Exception);
+			expect(() => cb.handover()).toThrow(InvalidStateException);
 			expect(() => cb.handover()).toThrow(/no callback registered/u);
 		});
 
@@ -115,7 +115,7 @@ describe('Callback', () => {
 			const cb = Callback.from<(n: number) => void>(undefined);
 
 			expect(cb.hasCallback).toBe(false);
-			expect(() => cb.execute(1)).toThrow(Exception);
+			expect(() => cb.execute(1)).toThrow(InvalidStateException);
 		});
 	});
 });

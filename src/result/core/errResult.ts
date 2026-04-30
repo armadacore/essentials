@@ -1,4 +1,4 @@
-import { Exception } from 'essentials:exceptions';
+import { Exception, InvalidStateException } from 'essentials:exceptions';
 import { ResultBase } from './resultBase';
 
 export class ErrResult<T> extends ResultBase<T> {
@@ -10,7 +10,7 @@ export class ErrResult<T> extends ResultBase<T> {
 	}
 
 	ok(): T {
-		throw new Exception("The Result object isn't in an ok state");
+		throw new InvalidStateException("The Result object isn't in an ok state");
 	}
 
 	err(): Exception {

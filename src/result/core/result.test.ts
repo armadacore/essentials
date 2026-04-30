@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-magic-numbers */
 import { describe, expect, it, vi } from 'vitest';
-import { Exception } from 'essentials:exceptions';
+import { Exception, InvalidStateException } from 'essentials:exceptions';
 import { Err, Ok, Result } from 'essentials:result';
 import { ErrResult } from './errResult';
 import { OkResult } from './okResult';
@@ -127,8 +127,8 @@ describe('OkResult / ErrResult terminal accessors (F-29 pinned)', () => {
 		expect(Ok(1).ok()).toBe(1);
 	});
 
-	it('OkResult.err throws an Exception (F-29)', () => {
-		expect(() => Ok(1).err()).toThrow(Exception);
+	it('OkResult.err throws an InvalidStateException (F-29)', () => {
+		expect(() => Ok(1).err()).toThrow(InvalidStateException);
 		expect(() => Ok(1).err()).toThrow(/isn't in an error state/u);
 	});
 
@@ -137,8 +137,8 @@ describe('OkResult / ErrResult terminal accessors (F-29 pinned)', () => {
 		expect(Err(ex).err()).toBe(ex);
 	});
 
-	it('ErrResult.ok throws an Exception (F-29)', () => {
-		expect(() => Err<number>(new Exception('boom')).ok()).toThrow(Exception);
+	it('ErrResult.ok throws an InvalidStateException (F-29)', () => {
+		expect(() => Err<number>(new Exception('boom')).ok()).toThrow(InvalidStateException);
 		expect(() => Err<number>(new Exception('boom')).ok()).toThrow(/isn't in an ok state/u);
 	});
 });
@@ -233,14 +233,14 @@ describe('ResultBase API (as-is behaviour)', () => {
 			expect(Ok(1).unwrap()).toBe(1);
 		});
 
-		it('unwrap throws an Exception for Err with the original Err preserved on cause', () => {
+		it('unwrap throws an InvalidStateException for Err with the original Err preserved on cause', () => {
 			const original = new Exception('boom');
 
 			try {
 				Err<number>(original).unwrap();
 				throw new Error('should have thrown');
 			} catch (caught) {
-				expect(caught).toBeInstanceOf(Exception);
+				expect(caught).toBeInstanceOf(InvalidStateException);
 				expect(caught).not.toBe(original);
 				expect((caught as Exception).message).toBe('Called unwrap on an Err value');
 				expect((caught as Exception).cause).toBe(original);
@@ -273,14 +273,14 @@ describe('ResultBase API (as-is behaviour)', () => {
 			expect(Ok(1).expect('msg')).toBe(1);
 		});
 
-		it('expect throws an Exception with the supplied message and the Err preserved on cause', () => {
+		it('expect throws an InvalidStateException with the supplied message and the Err preserved on cause', () => {
 			const ex = sample();
 
 			try {
 				Err<number>(ex).expect('ctx');
 				throw new Error('should have thrown');
 			} catch (caught) {
-				expect(caught).toBeInstanceOf(Exception);
+				expect(caught).toBeInstanceOf(InvalidStateException);
 				expect((caught as Exception).message).toBe('ctx');
 				expect((caught as Exception).cause).toBe(ex);
 			}
@@ -291,12 +291,12 @@ describe('ResultBase API (as-is behaviour)', () => {
 			expect(Err<number>(ex).expectErr('msg')).toBe(ex);
 		});
 
-		it('expectErr throws an Exception with the supplied message and the Ok value preserved on cause', () => {
+		it('expectErr throws an InvalidStateException with the supplied message and the Ok value preserved on cause', () => {
 			try {
 				Ok(1).expectErr('ctx');
 				throw new Error('should have thrown');
 			} catch (caught) {
-				expect(caught).toBeInstanceOf(Exception);
+				expect(caught).toBeInstanceOf(InvalidStateException);
 				expect((caught as Exception).message).toBe('ctx');
 				expect((caught as Exception).cause).toBe(1);
 			}

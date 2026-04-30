@@ -1,4 +1,4 @@
-import { Exception } from 'essentials:exceptions';
+import { Exception, InvalidStateException } from 'essentials:exceptions';
 import { type IResult } from '../models/IResult';
 import { Err, Ok } from './result';
 
@@ -35,7 +35,7 @@ export abstract class ResultBase<T> implements IResult<T> {
 
 	unwrap(): T {
 		if (this.isOk) return this.ok() as T;
-		throw new Exception('Called unwrap on an Err value', { cause: this.err() });
+		throw new InvalidStateException('Called unwrap on an Err value', { cause: this.err() });
 	}
 
 	unwrapOr(defaultValue: T): T {
@@ -48,12 +48,12 @@ export abstract class ResultBase<T> implements IResult<T> {
 
 	expect(message: string): T {
 		if (this.isOk) return this.ok() as T;
-		throw new Exception(message, { cause: this.err() });
+		throw new InvalidStateException(message, { cause: this.err() });
 	}
 
 	expectErr(message: string): Exception {
 		if (this.isErr) return this.err() as Exception;
-		throw new Exception(message, { cause: this.ok() });
+		throw new InvalidStateException(message, { cause: this.ok() });
 	}
 
 	onOk(fn: (value: T) => void): void {

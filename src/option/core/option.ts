@@ -1,5 +1,5 @@
 /* eslint-disable no-undefined, no-restricted-syntax, no-null/no-null, @typescript-eslint/no-explicit-any, @typescript-eslint/no-restricted-types */
-import { Exception } from 'essentials:exceptions';
+import { InvalidStateException } from 'essentials:exceptions';
 import { type IOption } from '../models/IOption';
 import { NoneOption } from './noneOption';
 import { OptionBase } from './optionBase';
@@ -15,7 +15,7 @@ const isJsonString = (value: unknown): value is string => {
 
 export const Some = <T>(value: T): IOption<T> => {
 	if (value === null || value === undefined) {
-		throw new Exception('Cannot create Some with null or undefined');
+		throw new InvalidStateException('Cannot create Some with null or undefined');
 	}
 
 	return new SomeOption(value);

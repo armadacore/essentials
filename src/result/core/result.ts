@@ -29,15 +29,15 @@ export const Result = {
 	},
 
 	fromAsync: async <T>(fn: () => Promise<T>): Promise<IResult<T>> => {
-		return fn()
-			.then(Ok)
-			.catch((error) => {
-				const exception =
-					error instanceof Exception
-						? error
-						: Exception.fromError(error instanceof Error ? error : new Error(String(error)));
+		try {
+			return Ok(await fn());
+		} catch (error) {
+			const exception =
+				error instanceof Exception
+					? error
+					: Exception.fromError(error instanceof Error ? error : new Error(String(error)));
 
-				return Err(exception);
-			});
+			return Err(exception);
+		}
 	},
 };

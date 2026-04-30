@@ -15,10 +15,6 @@ import { ResultBase } from './resultBase';
  *          fresh {@link Exception} instead of being graceful no-ops.
  *          The base class only protects against this by branching on
  *          `isOk`/`isErr` first.
- *  - F-30: {@link ResultBase.unwrap} on an Err throws a new
- *          {@link Exception} whose message embeds `String(error)` \u2014
- *          the original Err Exception (and its stack) is NOT
- *          re-thrown.
  *  - {@link Result.from} / {@link Result.fromAsync} unwrap a non-Error
  *          throw via `Exception.fromError(new Error(String(thrown)))`.
  */
@@ -232,12 +228,12 @@ describe('ResultBase API (as-is behaviour)', () => {
 		});
 	});
 
-	describe('unwrap / unwrapOr / unwrapOrElse (F-30 pinned)', () => {
+	describe('unwrap / unwrapOr / unwrapOrElse', () => {
 		it('unwrap returns the inner value for Ok', () => {
 			expect(Ok(1).unwrap()).toBe(1);
 		});
 
-		it('unwrap throws a NEW Exception for Err (F-30 \u2014 original Err is NOT re-thrown)', () => {
+		it('unwrap throws an Exception for Err with the original Err preserved on cause', () => {
 			const original = new Exception('boom');
 
 			try {
@@ -246,8 +242,8 @@ describe('ResultBase API (as-is behaviour)', () => {
 			} catch (caught) {
 				expect(caught).toBeInstanceOf(Exception);
 				expect(caught).not.toBe(original);
-				expect((caught as Exception).message).toMatch(/Called unwrap on an Err value/);
-				expect((caught as Exception).message).toContain('Exception: boom');
+				expect((caught as Exception).message).toBe('Called unwrap on an Err value');
+				expect((caught as Exception).cause).toBe(original);
 			}
 		});
 
@@ -277,8 +273,17 @@ describe('ResultBase API (as-is behaviour)', () => {
 			expect(Ok(1).expect('msg')).toBe(1);
 		});
 
-		it('expect throws a NEW Exception with the prefixed message for Err', () => {
-			expect(() => Err<number>(sample()).expect('ctx')).toThrow(/^ctx: Exception: boom/);
+		it('expect throws an Exception with the supplied message and the Err preserved on cause', () => {
+			const ex = sample();
+
+			try {
+				Err<number>(ex).expect('ctx');
+				throw new Error('should have thrown');
+			} catch (caught) {
+				expect(caught).toBeInstanceOf(Exception);
+				expect((caught as Exception).message).toBe('ctx');
+				expect((caught as Exception).cause).toBe(ex);
+			}
 		});
 
 		it('expectErr returns the inner exception for Err', () => {
@@ -286,8 +291,15 @@ describe('ResultBase API (as-is behaviour)', () => {
 			expect(Err<number>(ex).expectErr('msg')).toBe(ex);
 		});
 
-		it('expectErr throws a NEW Exception for Ok', () => {
-			expect(() => Ok(1).expectErr('ctx')).toThrow(/^ctx: 1/);
+		it('expectErr throws an Exception with the supplied message and the Ok value preserved on cause', () => {
+			try {
+				Ok(1).expectErr('ctx');
+				throw new Error('should have thrown');
+			} catch (caught) {
+				expect(caught).toBeInstanceOf(Exception);
+				expect((caught as Exception).message).toBe('ctx');
+				expect((caught as Exception).cause).toBe(1);
+			}
 		});
 	});
 

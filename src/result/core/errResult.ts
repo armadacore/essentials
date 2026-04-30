@@ -10,7 +10,7 @@ export class ErrResult<T> extends ResultBase<T> {
 	}
 
 	ok(): T {
-		throw new Exception(`The Result object isn't in a ok state`);
+		throw new Exception("The Result object isn't in an ok state");
 	}
 
 	err(): Exception {

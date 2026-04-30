@@ -14,6 +14,6 @@ export class OkResult<T> extends ResultBase<T> {
 	}
 
 	err(): Exception {
-		throw new Exception('The Result object isnt in a error state');
+		throw new Exception("The Result object isn't in an error state");
 	}
 }

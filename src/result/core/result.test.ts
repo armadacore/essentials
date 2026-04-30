@@ -129,7 +129,7 @@ describe('OkResult / ErrResult terminal accessors (F-29 pinned)', () => {
 
 	it('OkResult.err throws an Exception (F-29)', () => {
 		expect(() => Ok(1).err()).toThrow(Exception);
-		expect(() => Ok(1).err()).toThrow(/isnt in a error state/);
+		expect(() => Ok(1).err()).toThrow(/isn't in an error state/u);
 	});
 
 	it('ErrResult.err returns the stored exception', () => {
@@ -139,7 +139,7 @@ describe('OkResult / ErrResult terminal accessors (F-29 pinned)', () => {
 
 	it('ErrResult.ok throws an Exception (F-29)', () => {
 		expect(() => Err<number>(new Exception('boom')).ok()).toThrow(Exception);
-		expect(() => Err<number>(new Exception('boom')).ok()).toThrow(/isn't in a ok state/);
+		expect(() => Err<number>(new Exception('boom')).ok()).toThrow(/isn't in an ok state/u);
 	});
 });
 

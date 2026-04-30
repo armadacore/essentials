@@ -3,28 +3,23 @@
 /* eslint-disable no-null/no-null */
 import { describe, expect, it } from 'vitest';
 import { Exception, InvalidStateException, NotFoundException } from 'essentials:exceptions';
-import { None, Option, Some, toJsonObject, toJsonString, toOption } from 'essentials:option';
+import { None, Option, type SerializedOption, Some } from 'essentials:option';
 import { Err, Ok } from 'essentials:result';
 import { NoneOption } from './noneOption';
 import { OptionBase } from './optionBase';
 import { SomeOption } from './someOption';
 
 /**
- * Tests document the CURRENT (as-is) behaviour of the Option module.
+ * Tests document the current behaviour of the Option module.
  *
- * Several assertions intentionally pin known bugs / API quirks from
- * `ANALYSIS.md`. Do NOT change them without explicit approval:
- *
- *  - F-15: {@link toOption} treats every falsy primitive (0, '', false)
- *          as None.
- *  - F-14: {@link toJsonObject} represents None as `{ isSome: false,
- *          isNone: true, value: undefined }` — the `value` key
- *          disappears when run through `JSON.stringify`, which is part
- *          of why round-tripping is lossy for `Some<falsy>`.
  *  - {@link Some} throws an {@link InvalidStateException} when called
- *          with `null` or `undefined`.
+ *    with `null` or `undefined`.
+ *  - {@link Option.serialize} / {@link Option.deserialize} are a
+ *    lossless wire-format round-trip pair (replaces the old
+ *    `toJsonObject` / `toJsonString` / `toOption` trio — F-13/F-14/F-15
+ *    fixed by removal in #30).
  */
-describe('Option (as-is behaviour)', () => {
+describe('Option', () => {
 	describe('Some / None constructors', () => {
 		it('Some(value) returns a SomeOption instance', () => {
 			const option = Some(1);
@@ -133,134 +128,92 @@ describe('Option (as-is behaviour)', () => {
 		it('Option.none delegates to None', () => {
 			expect(Option.none<number>().isNone).toBe(true);
 		});
+	});
 
-		it('Option.toJsonString is the same function reference as toJsonString', () => {
-			expect(Option.toJsonString).toBe(toJsonString);
+	describe('Option.serialize', () => {
+		it('emits { isSome: true, value } for Some', () => {
+			expect(Option.serialize(Some(1))).toEqual({ isSome: true, value: 1 });
 		});
 
-		it('Option.toJsonObject is the same function reference as toJsonObject', () => {
-			expect(Option.toJsonObject).toBe(toJsonObject);
+		it('emits { isSome: false } for None (no value key)', () => {
+			expect(Option.serialize(None<number>())).toEqual({ isSome: false });
 		});
 
-		it('Option.toOption is the same function reference as toOption', () => {
-			expect(Option.toOption).toBe(toOption);
+		it('preserves falsy non-nullish payloads on Some', () => {
+			expect(Option.serialize(Some(0))).toEqual({ isSome: true, value: 0 });
+			expect(Option.serialize(Some(''))).toEqual({ isSome: true, value: '' });
+			expect(Option.serialize(Some(false))).toEqual({ isSome: true, value: false });
+		});
+
+		it('does not walk into nested structures — single-Option scope', () => {
+			// The envelope's `value` is whatever the Some carried,
+			// verbatim. Nested Options inside an array stay as
+			// OptionBase instances, not envelopes.
+			const inner = Some(2);
+			const outer = Some([inner]);
+			const envelope = Option.serialize(outer);
+
+			expect(envelope).toEqual({ isSome: true, value: [inner] });
 		});
 	});
 
-	describe('toJsonObject', () => {
-		it('serialises Some to { isSome, isNone, value }', () => {
-			expect(toJsonObject(Some(1))).toEqual({ isSome: true, isNone: false, value: 1 });
+	describe('Option.deserialize', () => {
+		it('reconstructs Some from a Some envelope', () => {
+			const restored = Option.deserialize<number>({ isSome: true, value: 7 });
+
+			expect(restored.isSome).toBe(true);
+			expect(restored.unwrap()).toBe(7);
 		});
 
-		it('nests a None envelope as the inner "value" of None (F-14 pinned)', () => {
-			// `toJsonObject(value.getValue())` on a None re-enters the
-			// function with `undefined`, which is treated as None and
-			// produces a recursive None envelope inside `value`.
-			expect(toJsonObject(None<number>())).toEqual({
-				isSome: false,
-				isNone: true,
-				value: { isSome: false, isNone: true, value: undefined },
-			});
+		it('reconstructs None from a None envelope', () => {
+			const restored = Option.deserialize<number>({ isSome: false });
+
+			expect(restored.isNone).toBe(true);
 		});
 
-		it('serialises a plain primitive verbatim', () => {
-			expect(toJsonObject(42)).toBe(42);
-			expect(toJsonObject('text')).toBe('text');
-			expect(toJsonObject(true)).toBe(true);
-		});
-
-		it('treats null as None and emits the None envelope (F-15-related)', () => {
-			expect(toJsonObject(null)).toEqual({ isSome: false, isNone: true, value: null });
-		});
-
-		it('recurses into arrays (None elements get the nested envelope)', () => {
-			expect(toJsonObject([Some(1), None<number>()])).toEqual([
-				{ isSome: true, isNone: false, value: 1 },
-				{ isSome: false, isNone: true, value: { isSome: false, isNone: true, value: undefined } },
-			]);
-		});
-
-		it('recurses into plain objects (None values get the nested envelope)', () => {
-			expect(toJsonObject({ a: Some(1), b: None<number>() })).toEqual({
-				a: { isSome: true, isNone: false, value: 1 },
-				b: { isSome: false, isNone: true, value: { isSome: false, isNone: true, value: undefined } },
-			});
+		it('throws InvalidStateException on a non-envelope shape', () => {
+			expect(() => Option.deserialize({} as unknown as SerializedOption<number>)).toThrow(InvalidStateException);
 		});
 	});
 
-	describe('toJsonString', () => {
-		it('JSON.stringifies the toJsonObject result', () => {
-			expect(toJsonString(Some(1))).toBe('{"isSome":true,"isNone":false,"value":1}');
+	describe('Option.serialize / Option.deserialize round-trip', () => {
+		it('is lossless for Some<number>', () => {
+			const original = Some(42);
+			const restored = Option.deserialize(Option.serialize(original));
+
+			expect(restored.isSome).toBe(true);
+			expect(restored.unwrap()).toBe(42);
 		});
 
-		it('emits the recursive None envelope when serialising None (F-14 pinned)', () => {
-			// The inner "value: undefined" disappears under JSON.stringify,
-			// leaving an empty `value: {...}` object \u2014 lossy round-trip.
-			expect(toJsonString(None<number>())).toBe(
-				'{"isSome":false,"isNone":true,"value":{"isSome":false,"isNone":true}}',
-			);
-		});
-	});
+		it('is lossless for None', () => {
+			const original = None<number>();
+			const restored = Option.deserialize(Option.serialize(original));
 
-	describe('toOption', () => {
-		it('returns the same instance for an existing Option', () => {
-			const some = Some(1);
-			const none = None<number>();
-
-			expect(toOption(some)).toBe(some);
-			expect(toOption(none)).toBe(none);
+			expect(restored.isNone).toBe(true);
 		});
 
-		it('returns None for falsy primitives (F-15 pinned)', () => {
-			// All of these short-circuit through `if (!value) return None()`.
-			expect(toOption(0).isNone).toBe(true);
-			expect(toOption('').isNone).toBe(true);
-			expect(toOption(false).isNone).toBe(true);
-			expect(toOption(null).isNone).toBe(true);
-			expect(toOption(undefined).isNone).toBe(true);
+		it('is lossless for Some<falsy> through JSON.stringify / JSON.parse', () => {
+			// The envelope shape was chosen so that the `value` key
+			// only exists on the Some branch — no `value: undefined`
+			// lost under JSON.stringify, no ambiguity on round-trip.
+			for (const payload of [0, '', false]) {
+				const original = Some(payload);
+				const json = JSON.stringify(Option.serialize(original));
+				const restored = Option.deserialize<typeof payload>(JSON.parse(json) as SerializedOption<typeof payload>);
+
+				expect(restored.isSome).toBe(true);
+				expect(restored.unwrap()).toBe(payload);
+			}
 		});
 
-		it('returns None for non-falsy primitives that are not objects', () => {
-			// After the `!value` short-circuit, the function returns None
-			// for any non-object primitive (string is handled as JSON only
-			// when wrapped in {}/[]).
-			expect(toOption(42).isNone).toBe(true);
-			expect(toOption(true).isNone).toBe(true);
-			expect(toOption('plain text').isNone).toBe(true);
-		});
+		it('is lossless for None through JSON.stringify / JSON.parse', () => {
+			const json = JSON.stringify(Option.serialize(None<number>()));
 
-		it('parses JSON objects of the Option envelope shape', () => {
-			const restored = toOption<number>('{"isSome":true,"isNone":false,"value":1}');
+			expect(json).toBe('{"isSome":false}');
 
-			expect((restored as OptionBase<number>).isSome).toBe(true);
-			expect((restored as OptionBase<number>).unwrap()).toBe(1);
-		});
+			const restored = Option.deserialize<number>(JSON.parse(json) as SerializedOption<number>);
 
-		it('parses a JSON-encoded None envelope', () => {
-			const restored = toOption<number>('{"isSome":false,"isNone":true}');
-
-			expect((restored as OptionBase<number>).isNone).toBe(true);
-		});
-
-		it('reconstructs Option from a parsed envelope object', () => {
-			const restored = toOption<number>({ isSome: true, isNone: false, value: 7 });
-
-			expect((restored as OptionBase<number>).unwrap()).toBe(7);
-		});
-
-		it('recurses into arrays returning an array of Options (untyped)', () => {
-			const restored = toOption([
-				{ isSome: true, isNone: false, value: 1 },
-				{ isSome: false, isNone: true },
-			]);
-
-			expect(Array.isArray(restored)).toBe(true);
-		});
-
-		it('recurses into plain objects', () => {
-			const restored = toOption({ a: { isSome: true, isNone: false, value: 1 } }) as Record<string, OptionBase<number>>;
-
-			expect(restored['a']?.unwrap()).toBe(1);
+			expect(restored.isNone).toBe(true);
 		});
 	});
 });

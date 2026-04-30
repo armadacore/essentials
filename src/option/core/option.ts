@@ -1,17 +1,10 @@
 import { InvalidStateException } from 'essentials:exceptions';
 import { type IResult } from 'essentials:result';
 import { type IOption } from '../models/IOption';
+import { type SerializedOption } from '../models/SerializedOption';
 import { NoneOption } from './noneOption';
-import { OptionBase, optionFactories } from './optionBase';
+import { optionFactories } from './optionBase';
 import { SomeOption } from './someOption';
-
-const isJsonString = (value: unknown): value is string => {
-	if (typeof value !== 'string') return false;
-	if (value.startsWith('{') && value.endsWith('}')) return true;
-	if (value.startsWith('[') && value.endsWith(']')) return true;
-
-	return false;
-};
 
 export const Some = <T>(value: T): IOption<T> => {
 	if (value === null || value === undefined) {
@@ -32,58 +25,47 @@ export const None = <T>(): IOption<T> => {
 optionFactories.some = Some;
 optionFactories.none = None;
 
-export const toJsonObject = <T>(value: T): unknown => {
-	if (Option.from(value).isNone) return { isSome: false, isNone: true, value };
-	if (typeof value !== 'object') return value;
-	if (Array.isArray(value)) return value.map(toJsonObject);
-	if (value instanceof OptionBase) {
-		return value.match(
-			(inner) => ({
-				isSome: true,
-				isNone: false,
-				value: toJsonObject(inner),
-			}),
-			() => ({
-				isSome: false,
-				isNone: true,
-				// Preserve the historical recursive-envelope shape of
-				// `toJsonObject(value.getValue())` on None: getValue()
-				// returned undefined, which Option.from(undefined) wrapped
-				// into another None envelope. F-14 keeps this behaviour
-				// pinned until the toOption/toJsonObject redesign in #30.
-				value: toJsonObject(undefined),
-			}),
-		);
-	}
-
-	return Object.fromEntries(
-		Object.entries(value as Record<string, unknown>).map(([key, val]) => [key, toJsonObject(val)]),
+/**
+ * Lossless wire-format conversion: turn an {@link IOption} into its
+ * {@link SerializedOption} envelope. The result is plain data and
+ * survives `JSON.stringify` / `JSON.parse` round-trips intact.
+ *
+ * Only operates on a single Option — does not walk into nested objects
+ * / arrays. Callers that need deep serialisation are expected to map
+ * over their data structure themselves and call `serialize` per leaf.
+ * That separation keeps the contract honest: the function does what
+ * its name says and nothing more.
+ */
+const serialize = <T>(option: IOption<T>): SerializedOption<T> => {
+	return option.match<SerializedOption<T>>(
+		(value) => ({ isSome: true, value }),
+		() => ({ isSome: false }),
 	);
 };
-export const toJsonString = <T>(value: T): string => JSON.stringify(toJsonObject(value));
 
-export const toOption = <T>(value: unknown): IOption<T> => {
-	if (!value) return None();
-	if (value instanceof OptionBase) return value;
-	if (isJsonString(value)) return toOption(JSON.parse(value));
-	if (typeof value !== 'object') return None();
-	if (Array.isArray(value)) return value.map(toOption) as any;
-	if ('isSome' in value && 'isNone' in value)
-		return value.isSome ? Some((value as unknown as { value: T }).value) : None();
+/**
+ * Inverse of {@link serialize}. Reconstructs an {@link IOption} from
+ * its {@link SerializedOption} envelope. Round-trip property:
+ *
+ *     deserialize(serialize(opt))  ≡  opt    (structurally)
+ *
+ * Only handles the documented envelope shape; throws an
+ * {@link InvalidStateException} on anything else. JSON parsing,
+ * walking arrays / objects, or guessing about foreign data is
+ * deliberately out of scope.
+ */
+const deserialize = <T>(envelope: SerializedOption<T>): IOption<T> => {
+	if (envelope.isSome) return Some(envelope.value);
+	if (envelope.isSome === false) return None();
 
-	return Object.fromEntries(
-		Object.entries(value).map(([key, val]) => {
-			return [key, toOption<T>(val)];
-		}),
-	) as any;
+	throw new InvalidStateException('deserialize received a value that is not a SerializedOption envelope');
 };
 
 export const Option = {
 	some: Some,
 	none: None,
-	toJsonObject,
-	toJsonString,
-	toOption,
+	serialize,
+	deserialize,
 
 	from: <T>(value: T | null | undefined): IOption<T> => {
 		return value !== null && value !== undefined ? Some(value) : None();

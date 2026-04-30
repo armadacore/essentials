@@ -1,6 +1,6 @@
-import { HttpStatusException } from './httpStatusException';
+import { HttpStatusExceptionBase } from './httpStatusExceptionBase';
 
-export class BadRequestException extends HttpStatusException {
+export class BadRequestException extends HttpStatusExceptionBase {
 	static readonly httpStatus = 400;
 
 	constructor(message?: string, options?: { cause?: unknown }) {

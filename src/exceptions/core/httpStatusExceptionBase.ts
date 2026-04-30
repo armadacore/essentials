@@ -10,8 +10,8 @@ import { Exception } from './exception';
  * handlers can map class → status without an `instanceof` switch:
  *
  * ```ts
- * if (err instanceof HttpStatusException) {
- *     ctx.status((err.constructor as typeof HttpStatusException).httpStatus);
+ * if (err instanceof HttpStatusExceptionBase) {
+ *     ctx.status((err.constructor as typeof HttpStatusExceptionBase).httpStatus);
  * }
  * ```
  *
@@ -19,7 +19,7 @@ import { Exception } from './exception';
  * (e.g. {@link InvalidStateException}) deliberately do **not** extend
  * this class; they extend {@link Exception} directly.
  */
-export abstract class HttpStatusException extends Exception {
+export abstract class HttpStatusExceptionBase extends Exception {
 	/** HTTP status code this exception represents. Overridden on every concrete subclass. */
 	static readonly httpStatus: number;
 }

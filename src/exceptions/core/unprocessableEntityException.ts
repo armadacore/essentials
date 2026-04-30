@@ -1,6 +1,6 @@
-import { HttpStatusException } from './httpStatusException';
+import { HttpStatusExceptionBase } from './httpStatusExceptionBase';
 
-export class UnprocessableEntityException extends HttpStatusException {
+export class UnprocessableEntityException extends HttpStatusExceptionBase {
 	static readonly httpStatus = 422;
 
 	constructor(message?: string, options?: { cause?: unknown }) {

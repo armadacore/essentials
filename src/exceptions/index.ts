@@ -5,7 +5,7 @@ export * from './core/conflictException';
 export * from './core/exception';
 export * from './core/forbiddenException';
 export * from './core/gatewayTimeoutException';
-export * from './core/httpStatusException';
+export * from './core/httpStatusExceptionBase';
 export * from './core/httpStatusExceptionFactory';
 export * from './core/internalServerErrorException';
 export * from './core/invalidStateException';

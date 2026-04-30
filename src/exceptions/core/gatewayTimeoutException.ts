@@ -1,6 +1,6 @@
-import { HttpStatusException } from './httpStatusException';
+import { HttpStatusExceptionBase } from './httpStatusExceptionBase';
 
-export class GatewayTimeoutException extends HttpStatusException {
+export class GatewayTimeoutException extends HttpStatusExceptionBase {
 	static readonly httpStatus = 504;
 
 	constructor(message?: string, options?: { cause?: unknown }) {

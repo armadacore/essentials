@@ -1,6 +1,6 @@
-import { HttpStatusException } from './httpStatusException';
+import { HttpStatusExceptionBase } from './httpStatusExceptionBase';
 
-export class NotFoundException extends HttpStatusException {
+export class NotFoundException extends HttpStatusExceptionBase {
 	static readonly httpStatus = 404;
 
 	constructor(message?: string, options?: { cause?: unknown }) {

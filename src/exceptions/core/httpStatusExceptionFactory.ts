@@ -4,7 +4,7 @@ import { ConflictException } from './conflictException';
 import { Exception } from './exception';
 import { ForbiddenException } from './forbiddenException';
 import { GatewayTimeoutException } from './gatewayTimeoutException';
-import { HttpStatusException } from './httpStatusException';
+import { HttpStatusExceptionBase } from './httpStatusExceptionBase';
 import { InternalServerErrorException } from './internalServerErrorException';
 import { MethodNotAllowedException } from './methodNotAllowedException';
 import { NotFoundException } from './notFoundException';
@@ -14,15 +14,15 @@ import { UnauthorizedException } from './unauthorizedException';
 import { UnprocessableEntityException } from './unprocessableEntityException';
 
 /**
- * Constructor signature shared by every {@link HttpStatusException}
+ * Constructor signature shared by every {@link HttpStatusExceptionBase}
  * subclass. Used by the lookup table to instantiate the correct class
  * for a given HTTP status code without an `instanceof`-cascade.
  */
-type IHttpExceptionConstructor = new (message?: string, options?: { cause?: unknown }) => HttpStatusException;
+type IHttpExceptionConstructor = new (message?: string, options?: { cause?: unknown }) => HttpStatusExceptionBase;
 
 /**
  * Single source of truth for the status-code → class mapping. Every
- * concrete {@link HttpStatusException} subclass registers itself here
+ * concrete {@link HttpStatusExceptionBase} subclass registers itself here
  * via its `static httpStatus` field. Adding a new subclass is a
  * one-line addition to this list — the rest of the factory adapts
  * automatically.
@@ -50,14 +50,14 @@ const httpStatusExceptions: readonly IHttpExceptionConstructor[] = [
  */
 const httpStatusLookup: ReadonlyMap<number, IHttpExceptionConstructor> = new Map(
 	httpStatusExceptions.map((ctor) => [
-		(ctor as unknown as typeof HttpStatusException).httpStatus,
+		(ctor as unknown as typeof HttpStatusExceptionBase).httpStatus,
 		ctor,
 	]),
 );
 
 export class HttpStatusExceptionFactory {
 	/**
-	 * Creates the {@link HttpStatusException} subclass that represents
+	 * Creates the {@link HttpStatusExceptionBase} subclass that represents
 	 * the given HTTP status code. Falls back to a generic
 	 * {@link Exception} (with a synthesised `HTTP <status> Error`
 	 * message) for any status without a registered subclass.

@@ -1,6 +1,6 @@
-import { HttpStatusException } from './httpStatusException';
+import { HttpStatusExceptionBase } from './httpStatusExceptionBase';
 
-export class TooManyRequestsException extends HttpStatusException {
+export class TooManyRequestsException extends HttpStatusExceptionBase {
 	static readonly httpStatus = 429;
 
 	constructor(message?: string, options?: { cause?: unknown }) {

@@ -1,6 +1,6 @@
-import { HttpStatusException } from './httpStatusException';
+import { HttpStatusExceptionBase } from './httpStatusExceptionBase';
 
-export class ServiceUnavailableException extends HttpStatusException {
+export class ServiceUnavailableException extends HttpStatusExceptionBase {
 	static readonly httpStatus = 503;
 
 	constructor(message?: string, options?: { cause?: unknown }) {

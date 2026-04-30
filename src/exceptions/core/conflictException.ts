@@ -1,6 +1,6 @@
-import { HttpStatusException } from './httpStatusException';
+import { HttpStatusExceptionBase } from './httpStatusExceptionBase';
 
-export class ConflictException extends HttpStatusException {
+export class ConflictException extends HttpStatusExceptionBase {
 	static readonly httpStatus = 409;
 
 	constructor(message?: string, options?: { cause?: unknown }) {

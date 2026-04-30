@@ -6,7 +6,7 @@ import { ConflictException } from './conflictException';
 import { Exception } from './exception';
 import { ForbiddenException } from './forbiddenException';
 import { GatewayTimeoutException } from './gatewayTimeoutException';
-import { HttpStatusException } from './httpStatusException';
+import { HttpStatusExceptionBase } from './httpStatusExceptionBase';
 import { InternalServerErrorException } from './internalServerErrorException';
 import { InvalidStateException } from './invalidStateException';
 import { MethodNotAllowedException } from './methodNotAllowedException';
@@ -29,7 +29,7 @@ import { UnprocessableEntityException } from './unprocessableEntityException';
  * has been removed (Sprint 4 #33 / F-45).
  *
  * Subclasses representing an HTTP response additionally extend
- * {@link HttpStatusException} and carry a `static readonly httpStatus`
+ * {@link HttpStatusExceptionBase} and carry a `static readonly httpStatus`
  * (Sprint 4 #27 / F-48). {@link InvalidStateException} is library-internal
  * and deliberately does **not** participate in that contract; its
  * httpStatus spec entry is `None()`.
@@ -179,16 +179,16 @@ describe('Exception subclasses', () => {
 
 			spec.httpStatus.match(
 				(expected) => {
-					it(`extends HttpStatusException and exposes httpStatus ${expected}`, () => {
+					it(`extends HttpStatusExceptionBase and exposes httpStatus ${expected}`, () => {
 						const ex = new spec.ctor();
 
-						expect(ex).toBeInstanceOf(HttpStatusException);
-						expect((spec.ctor as unknown as typeof HttpStatusException).httpStatus).toBe(expected);
+						expect(ex).toBeInstanceOf(HttpStatusExceptionBase);
+						expect((spec.ctor as unknown as typeof HttpStatusExceptionBase).httpStatus).toBe(expected);
 					});
 				},
 				() => {
-					it('does NOT extend HttpStatusException (library-internal, no HTTP mapping)', () => {
-						expect(new spec.ctor()).not.toBeInstanceOf(HttpStatusException);
+					it('does NOT extend HttpStatusExceptionBase (library-internal, no HTTP mapping)', () => {
+						expect(new spec.ctor()).not.toBeInstanceOf(HttpStatusExceptionBase);
 					});
 				},
 			);

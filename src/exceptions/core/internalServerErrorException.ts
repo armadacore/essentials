@@ -1,6 +1,6 @@
-import { HttpStatusException } from './httpStatusException';
+import { HttpStatusExceptionBase } from './httpStatusExceptionBase';
 
-export class InternalServerErrorException extends HttpStatusException {
+export class InternalServerErrorException extends HttpStatusExceptionBase {
 	static readonly httpStatus = 500;
 
 	constructor(message?: string, options?: { cause?: unknown }) {

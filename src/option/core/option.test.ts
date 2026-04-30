@@ -2,8 +2,9 @@
 
 /* eslint-disable no-null/no-null */
 import { describe, expect, it } from 'vitest';
-import { InvalidStateException } from 'essentials:exceptions';
+import { Exception, InvalidStateException, NotFoundException } from 'essentials:exceptions';
 import { None, Option, Some, toJsonObject, toJsonString, toOption } from 'essentials:option';
+import { Err, Ok } from 'essentials:result';
 import { NoneOption } from './noneOption';
 import { OptionBase } from './optionBase';
 import { SomeOption } from './someOption';
@@ -91,6 +92,36 @@ describe('Option (as-is behaviour)', () => {
 			// `fromPredicate` calls `Some(value)` directly when truthy, so
 			// passing `null` with a truthy predicate hits the Some-throw.
 			expect(() => Option.fromPredicate<unknown>(null, () => true)).toThrow(InvalidStateException);
+		});
+	});
+
+	describe('Option.fromResult', () => {
+		it('lifts an Ok into Some with the same value', () => {
+			const opt = Option.fromResult(Ok(42));
+
+			expect(opt.isSome).toBe(true);
+			expect(opt.unwrap()).toBe(42);
+		});
+
+		it('lifts an Err into None (the error is intentionally dropped)', () => {
+			const opt = Option.fromResult(Err(new NotFoundException('lost')));
+
+			expect(opt.isNone).toBe(true);
+		});
+
+		it('preserves complex Ok values verbatim', () => {
+			const payload = { user: 'alice', roles: ['admin'] };
+			const opt = Option.fromResult(Ok(payload));
+
+			expect(opt.unwrap()).toBe(payload);
+		});
+
+		it('does not surface the error type — any Exception subclass collapses to None', () => {
+			const opt1 = Option.fromResult(Err(new NotFoundException()));
+			const opt2 = Option.fromResult(Err(new Exception('generic')));
+
+			expect(opt1.isNone).toBe(true);
+			expect(opt2.isNone).toBe(true);
 		});
 	});
 

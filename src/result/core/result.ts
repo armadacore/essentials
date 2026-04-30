@@ -1,4 +1,5 @@
 import { Exception } from 'essentials:exceptions';
+import { type IOption } from 'essentials:option';
 import { type IResult } from '../models/IResult';
 import { ErrResult } from './errResult';
 import { OkResult } from './okResult';
@@ -47,5 +48,19 @@ export const Result = {
 
 			return Err(exception);
 		}
+	},
+
+	/**
+	 * Lifts an {@link IOption} into an {@link IResult} by injecting an
+	 * explicit error for the missing branch. `Some(v)` becomes `Ok(v)`,
+	 * `None` becomes `Err(error)`.
+	 *
+	 * The error must be supplied because an {@link IOption} carries no
+	 * information about *why* a value is absent. Use
+	 * {@link Option.fromResult} for the inverse direction (which is
+	 * lossy — the error is dropped).
+	 */
+	fromOption: <T>(option: IOption<T>, error: Exception): IResult<T> => {
+		return option.isSome ? Ok(option.unwrap()) : Err(error);
 	},
 };

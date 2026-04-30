@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-magic-numbers */
 import { describe, expect, it, vi } from 'vitest';
-import { Exception, InvalidStateException } from 'essentials:exceptions';
+import { Exception, InvalidStateException, NotFoundException } from 'essentials:exceptions';
+import { None, Some } from 'essentials:option';
 import { Err, Ok, Result } from 'essentials:result';
 import { ErrResult } from './errResult';
 import { OkResult } from './okResult';
@@ -118,6 +119,40 @@ describe('Result module (as-is behaviour)', () => {
 			});
 
 			expect(r.err().message).toBe('boom');
+		});
+	});
+
+	describe('Result.fromOption', () => {
+		it('lifts a Some into Ok with the same value', () => {
+			const r = Result.fromOption(Some(42), new NotFoundException());
+
+			expect(r.isOk).toBe(true);
+			expect(r.unwrap()).toBe(42);
+		});
+
+		it('lifts a None into Err with the supplied error', () => {
+			const error = new NotFoundException('lost');
+			const r = Result.fromOption(None<number>(), error);
+
+			expect(r.isErr).toBe(true);
+			expect(r.err()).toBe(error);
+		});
+
+		it('does not consult the error when the Option is Some (lazy semantics not required)', () => {
+			// Even if a caller passes a real error object, it must be
+			// ignored when the Option carries a value.
+			const error = new NotFoundException('would have been lost');
+			const r = Result.fromOption(Some('value'), error);
+
+			expect(r.isOk).toBe(true);
+			expect(r.unwrap()).toBe('value');
+		});
+
+		it('preserves complex Some values verbatim', () => {
+			const payload = { user: 'alice', roles: ['admin'] };
+			const r = Result.fromOption(Some(payload), new Exception('unused'));
+
+			expect(r.unwrap()).toBe(payload);
 		});
 	});
 });

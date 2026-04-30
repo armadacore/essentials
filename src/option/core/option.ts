@@ -1,4 +1,5 @@
 import { InvalidStateException } from 'essentials:exceptions';
+import { type IResult } from 'essentials:result';
 import { type IOption } from '../models/IOption';
 import { NoneOption } from './noneOption';
 import { OptionBase, optionFactories } from './optionBase';
@@ -90,5 +91,17 @@ export const Option = {
 
 	fromPredicate: <T>(value: T, predicate: (value: T) => boolean): IOption<T> => {
 		return predicate(value) ? Some(value) : None();
+	},
+
+	/**
+	 * Lifts an {@link IResult} into an {@link IOption} by discarding the
+	 * error branch. `Ok(v)` becomes `Some(v)`, `Err(_)` becomes `None`.
+	 *
+	 * The error is intentionally dropped — this conversion is
+	 * lossy. Use {@link Result.fromOption} for the inverse direction
+	 * (which requires an explicit error to inject).
+	 */
+	fromResult: <T>(result: IResult<T>): IOption<T> => {
+		return result.isOk ? Some(result.unwrap()) : None();
 	},
 };

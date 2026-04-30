@@ -1,24 +1,33 @@
-/* eslint-disable @typescript-eslint/no-magic-numbers */
 import { describe, expect, it } from 'vitest';
+import { BadGatewayException } from './badGatewayException';
 import { BadRequestException } from './badRequestException';
 import { ConflictException } from './conflictException';
 import { Exception } from './exception';
 import { ForbiddenException } from './forbiddenException';
+import { GatewayTimeoutException } from './gatewayTimeoutException';
 import { HttpStatusExceptionFactory } from './httpStatusExceptionFactory';
 import { InternalServerErrorException } from './internalServerErrorException';
+import { MethodNotAllowedException } from './methodNotAllowedException';
 import { NotFoundException } from './notFoundException';
 import { ServiceUnavailableException } from './serviceUnavailableException';
+import { TooManyRequestsException } from './tooManyRequestsException';
 import { UnauthorizedException } from './unauthorizedException';
+import { UnprocessableEntityException } from './unprocessableEntityException';
 
-describe('HttpStatusExceptionFactory.createFromStatus (as-is behaviour)', () => {
+describe('HttpStatusExceptionFactory.createFromStatus', () => {
 	const cases: ReadonlyArray<readonly [number, new (...args: never[]) => Exception]> = [
 		[400, BadRequestException],
 		[401, UnauthorizedException],
 		[403, ForbiddenException],
 		[404, NotFoundException],
+		[405, MethodNotAllowedException],
 		[409, ConflictException],
+		[422, UnprocessableEntityException],
+		[429, TooManyRequestsException],
 		[500, InternalServerErrorException],
+		[502, BadGatewayException],
 		[503, ServiceUnavailableException],
+		[504, GatewayTimeoutException],
 	];
 
 	for (const [status, Class] of cases) {

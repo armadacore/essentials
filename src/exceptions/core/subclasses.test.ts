@@ -1,15 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import { type IOption, None, Some } from 'essentials:option';
+import { BadGatewayException } from './badGatewayException';
 import { BadRequestException } from './badRequestException';
 import { ConflictException } from './conflictException';
 import { Exception } from './exception';
 import { ForbiddenException } from './forbiddenException';
+import { GatewayTimeoutException } from './gatewayTimeoutException';
 import { HttpStatusException } from './httpStatusException';
 import { InternalServerErrorException } from './internalServerErrorException';
 import { InvalidStateException } from './invalidStateException';
+import { MethodNotAllowedException } from './methodNotAllowedException';
 import { NotFoundException } from './notFoundException';
 import { ServiceUnavailableException } from './serviceUnavailableException';
+import { TooManyRequestsException } from './tooManyRequestsException';
 import { UnauthorizedException } from './unauthorizedException';
+import { UnprocessableEntityException } from './unprocessableEntityException';
 
 /**
  * Tests document the behaviour of all Exception subclasses. They share
@@ -95,6 +100,41 @@ const subclasses: readonly ISubclassSpec[] = [
 		info: 'UNAUTHORIZED',
 		defaultMessage: 'Unauthorized',
 		httpStatus: Some(401),
+	},
+	{
+		ctor: MethodNotAllowedException,
+		name: 'MethodNotAllowedException',
+		info: 'METHOD_NOT_ALLOWED',
+		defaultMessage: 'Method Not Allowed',
+		httpStatus: Some(405),
+	},
+	{
+		ctor: UnprocessableEntityException,
+		name: 'UnprocessableEntityException',
+		info: 'UNPROCESSABLE_ENTITY',
+		defaultMessage: 'Unprocessable Entity',
+		httpStatus: Some(422),
+	},
+	{
+		ctor: TooManyRequestsException,
+		name: 'TooManyRequestsException',
+		info: 'TOO_MANY_REQUESTS',
+		defaultMessage: 'Too Many Requests',
+		httpStatus: Some(429),
+	},
+	{
+		ctor: BadGatewayException,
+		name: 'BadGatewayException',
+		info: 'BAD_GATEWAY',
+		defaultMessage: 'Bad Gateway',
+		httpStatus: Some(502),
+	},
+	{
+		ctor: GatewayTimeoutException,
+		name: 'GatewayTimeoutException',
+		info: 'GATEWAY_TIMEOUT',
+		defaultMessage: 'Gateway Timeout',
+		httpStatus: Some(504),
 	},
 ];
 

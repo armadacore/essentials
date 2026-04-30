@@ -16,7 +16,7 @@ import { Exception } from './exception';
  */
 export class InvalidStateException extends Exception {
 	constructor(message?: string, options?: { cause?: unknown }) {
-		super(message, options);
+		super(message || 'Invalid State', options);
 		this.name = 'InvalidStateException';
 		this.setInfo('INVALID_STATE');
 

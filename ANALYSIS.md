@@ -718,10 +718,10 @@ HTTP-Statuscode-zentrierte Exception-Hierarchie mit `info`-Tag (machine-readable
 | 28 | `isOption` / `isResult` strikter (`instanceof OptionBase`) | F-17, F-31 | nur wenn Cross-Realm kein Use-Case |
 | 29 | `getValue()` als `protected` markieren; Konsumenten intern lösen | F-19 | sauberer Public-Vertrag |
 | 30 | `toOption` aufspalten oder dokumentieren als JSON-Roundtrip-Helper | F-13, F-14 | abhängig vom Use-Case |
-| 31 | `.DS_Store`-Cleanup + `.gitignore`-Eintrag | – | Hygiene |
-| 32 | Wurzel `index.ts` Semikolon Z.6 + Stil-Konsistenz | F-02 | Kosmetik |
-| 33 | Default-Messages in Exception-Subklassen vereinheitlichen | F-45 | API-Konsistenz |
-| 34 | Inkonsistente Formatierung Basis vs. Subklassen durch Prettier glätten | F-52 | Lint-Run |
+| 31 | ✅ **Erledigt:** `.DS_Store`-Hygiene bereits intakt — `.gitignore` hat den Eintrag (Z.20), keine `.DS_Store` ist im Repo getrackt. Kein Code-Change nötig. | – | (kein) |
+| 32 | ✅ **Erledigt:** Wurzel-`src/index.ts` ist bereits konsistent — alle vier Re-Exporte mit Semikolon, trailing newline. F-02 wurde unbemerkt vom Initial-Bootstrap mitgefixt. | F-02 | (kein) |
+| 33 | ✅ **Erledigt:** Default-Messages aller Exception-Subklassen vereinheitlicht (Variante A). `BadRequestException` → 'Bad Request', `NotFoundException` → 'Not Found', `InvalidStateException` → 'Invalid State'. Pinned-Bug-Test in `subclasses.test.ts` an die neue Symmetrie angepasst, `InvalidStateException`-Spec ergänzt (war bisher gar nicht abgedeckt). | F-45 | `badRequestException.ts`, `notFoundException.ts`, `invalidStateException.ts`, `subclasses.test.ts` |
+| 34 | ✅ **Erledigt:** Prettier auf `src/` angewendet — 12 Dateien (8 Source + 4 Tests) auf einheitliche Formatierung gebracht. Keine semantischen Änderungen, nur Whitespace/Umbrüche. 228/228 Tests blieben grün. | F-52 | 8 Source-Dateien (alle Exception-Subklassen, `IException.ts`) + 4 Test-Dateien |
 
 ---
 

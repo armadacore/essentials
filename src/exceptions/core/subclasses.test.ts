@@ -5,22 +5,22 @@ import { ConflictException } from './conflictException';
 import { Exception } from './exception';
 import { ForbiddenException } from './forbiddenException';
 import { InternalServerErrorException } from './internalServerErrorException';
+import { InvalidStateException } from './invalidStateException';
 import { NotFoundException } from './notFoundException';
 import { ServiceUnavailableException } from './serviceUnavailableException';
 import { UnauthorizedException } from './unauthorizedException';
 
 /**
- * Tests document the behaviour of all HTTP-status Exception subclasses.
- * They share a structural contract:
+ * Tests document the behaviour of all Exception subclasses. They share
+ * a uniform structural contract:
  *   - extend {@link Exception} (and therefore {@link Error})
  *   - own a fixed `info` token
  *   - own a fixed default `name`
- *   - have a fixed default message (with one exception: see below)
+ *   - own a fixed human-readable default `message`
  *
- * Asymmetry note: {@link BadRequestException} and {@link NotFoundException}
- * do NOT set a default message \u2014 they are constructible with
- * `message === ''`. The other five subclasses fall back to a
- * human-readable default. See ANALYSIS.md (F-43, F-46).
+ * The previous asymmetry where {@link BadRequestException} and
+ * {@link NotFoundException} were constructible with `message === ''`
+ * has been removed (Sprint 4 #33 / F-45).
  */
 
 interface ISubclassSpec {
@@ -31,16 +31,32 @@ interface ISubclassSpec {
 }
 
 const subclasses: readonly ISubclassSpec[] = [
-	{ ctor: BadRequestException, name: 'BadRequestException', info: 'BAD_REQUEST', defaultMessage: '' },
+	{ ctor: BadRequestException, name: 'BadRequestException', info: 'BAD_REQUEST', defaultMessage: 'Bad Request' },
 	{ ctor: ConflictException, name: 'ConflictException', info: 'CONFLICT', defaultMessage: 'Conflict' },
 	{ ctor: ForbiddenException, name: 'ForbiddenException', info: 'FORBIDDEN', defaultMessage: 'Forbidden' },
-	{ ctor: InternalServerErrorException, name: 'InternalServerErrorException', info: 'INTERNAL_SERVER_ERROR', defaultMessage: 'Internal Server Error' },
-	{ ctor: NotFoundException, name: 'NotFoundException', info: 'NOT_FOUND', defaultMessage: '' },
-	{ ctor: ServiceUnavailableException, name: 'ServiceUnavailableException', info: 'SERVICE_UNAVAILABLE', defaultMessage: 'Service Unavailable' },
+	{
+		ctor: InternalServerErrorException,
+		name: 'InternalServerErrorException',
+		info: 'INTERNAL_SERVER_ERROR',
+		defaultMessage: 'Internal Server Error',
+	},
+	{
+		ctor: InvalidStateException,
+		name: 'InvalidStateException',
+		info: 'INVALID_STATE',
+		defaultMessage: 'Invalid State',
+	},
+	{ ctor: NotFoundException, name: 'NotFoundException', info: 'NOT_FOUND', defaultMessage: 'Not Found' },
+	{
+		ctor: ServiceUnavailableException,
+		name: 'ServiceUnavailableException',
+		info: 'SERVICE_UNAVAILABLE',
+		defaultMessage: 'Service Unavailable',
+	},
 	{ ctor: UnauthorizedException, name: 'UnauthorizedException', info: 'UNAUTHORIZED', defaultMessage: 'Unauthorized' },
 ];
 
-describe('HTTP-status Exception subclasses', () => {
+describe('Exception subclasses', () => {
 	for (const spec of subclasses) {
 		describe(spec.name, () => {
 			it('extends Exception and Error', () => {

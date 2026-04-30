@@ -5,10 +5,20 @@ import { ErrResult } from './errResult';
 import { OkResult } from './okResult';
 import { resultFactories } from './resultBase';
 
+/**
+ * Constructs an {@link Ok} variant of {@link IResult} carrying the
+ * success `value`. Accepts any value, including `null` / `undefined`
+ * — those are valid success payloads, distinct from {@link Err}.
+ */
 export const Ok = <T>(value: T): IResult<T> => {
 	return new OkResult(value);
 };
 
+/**
+ * Constructs an {@link Err} variant of {@link IResult} carrying
+ * `error`. The error type is fixed to {@link Exception} library-wide;
+ * use {@link Exception.fromError} to convert a foreign `Error`.
+ */
 export const Err = <T = never>(error: Exception): IResult<T> => {
 	return new ErrResult(error);
 };
@@ -20,10 +30,26 @@ export const Err = <T = never>(error: Exception): IResult<T> => {
 resultFactories.ok = Ok;
 resultFactories.err = Err;
 
+/**
+ * Namespace bundling all {@link IResult}-related factories and
+ * conversions. Prefer this over the top-level {@link Ok} / {@link Err}
+ * factories when you want a single import surface
+ * (`import { Result } from 'essentials:result'`).
+ */
 export const Result = {
+	/** Alias for the top-level {@link Ok} factory. */
 	ok: Ok,
+
+	/** Alias for the top-level {@link Err} factory. */
 	err: Err,
 
+	/**
+	 * Runs `fn` and lifts the outcome into an {@link IResult}: the
+	 * return value becomes {@link Ok}, any thrown value becomes
+	 * {@link Err}. Non-{@link Exception} throws are wrapped via
+	 * {@link Exception.fromError}; non-`Error` throws (e.g. a thrown
+	 * string or number) are first wrapped in a synthetic `Error`.
+	 */
 	from: <T>(fn: () => T): IResult<T> => {
 		try {
 			return Ok(fn());
@@ -37,6 +63,11 @@ export const Result = {
 		}
 	},
 
+	/**
+	 * Async counterpart to {@link from}. Awaits `fn()` and lifts the
+	 * outcome into a `Promise<IResult<T>>`. The same exception
+	 * normalisation rules apply.
+	 */
 	fromAsync: async <T>(fn: () => Promise<T>): Promise<IResult<T>> => {
 		try {
 			return Ok(await fn());

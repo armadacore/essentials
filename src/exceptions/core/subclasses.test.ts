@@ -1,9 +1,10 @@
-/* eslint-disable @typescript-eslint/no-magic-numbers */
 import { describe, expect, it } from 'vitest';
+import { type IOption, None, Some } from 'essentials:option';
 import { BadRequestException } from './badRequestException';
 import { ConflictException } from './conflictException';
 import { Exception } from './exception';
 import { ForbiddenException } from './forbiddenException';
+import { HttpStatusException } from './httpStatusException';
 import { InternalServerErrorException } from './internalServerErrorException';
 import { InvalidStateException } from './invalidStateException';
 import { NotFoundException } from './notFoundException';
@@ -21,6 +22,12 @@ import { UnauthorizedException } from './unauthorizedException';
  * The previous asymmetry where {@link BadRequestException} and
  * {@link NotFoundException} were constructible with `message === ''`
  * has been removed (Sprint 4 #33 / F-45).
+ *
+ * Subclasses representing an HTTP response additionally extend
+ * {@link HttpStatusException} and carry a `static readonly httpStatus`
+ * (Sprint 4 #27 / F-48). {@link InvalidStateException} is library-internal
+ * and deliberately does **not** participate in that contract; its
+ * httpStatus spec entry is `None()`.
  */
 
 interface ISubclassSpec {
@@ -28,32 +35,67 @@ interface ISubclassSpec {
 	readonly name: string;
 	readonly info: string;
 	readonly defaultMessage: string;
+	/** HTTP status carried by the class. `None()` for non-HTTP subclasses. */
+	readonly httpStatus: IOption<number>;
 }
 
 const subclasses: readonly ISubclassSpec[] = [
-	{ ctor: BadRequestException, name: 'BadRequestException', info: 'BAD_REQUEST', defaultMessage: 'Bad Request' },
-	{ ctor: ConflictException, name: 'ConflictException', info: 'CONFLICT', defaultMessage: 'Conflict' },
-	{ ctor: ForbiddenException, name: 'ForbiddenException', info: 'FORBIDDEN', defaultMessage: 'Forbidden' },
+	{
+		ctor: BadRequestException,
+		name: 'BadRequestException',
+		info: 'BAD_REQUEST',
+		defaultMessage: 'Bad Request',
+		httpStatus: Some(400),
+	},
+	{
+		ctor: ConflictException,
+		name: 'ConflictException',
+		info: 'CONFLICT',
+		defaultMessage: 'Conflict',
+		httpStatus: Some(409),
+	},
+	{
+		ctor: ForbiddenException,
+		name: 'ForbiddenException',
+		info: 'FORBIDDEN',
+		defaultMessage: 'Forbidden',
+		httpStatus: Some(403),
+	},
 	{
 		ctor: InternalServerErrorException,
 		name: 'InternalServerErrorException',
 		info: 'INTERNAL_SERVER_ERROR',
 		defaultMessage: 'Internal Server Error',
+		httpStatus: Some(500),
 	},
 	{
 		ctor: InvalidStateException,
 		name: 'InvalidStateException',
 		info: 'INVALID_STATE',
 		defaultMessage: 'Invalid State',
+		httpStatus: None(),
 	},
-	{ ctor: NotFoundException, name: 'NotFoundException', info: 'NOT_FOUND', defaultMessage: 'Not Found' },
+	{
+		ctor: NotFoundException,
+		name: 'NotFoundException',
+		info: 'NOT_FOUND',
+		defaultMessage: 'Not Found',
+		httpStatus: Some(404),
+	},
 	{
 		ctor: ServiceUnavailableException,
 		name: 'ServiceUnavailableException',
 		info: 'SERVICE_UNAVAILABLE',
 		defaultMessage: 'Service Unavailable',
+		httpStatus: Some(503),
 	},
-	{ ctor: UnauthorizedException, name: 'UnauthorizedException', info: 'UNAUTHORIZED', defaultMessage: 'Unauthorized' },
+	{
+		ctor: UnauthorizedException,
+		name: 'UnauthorizedException',
+		info: 'UNAUTHORIZED',
+		defaultMessage: 'Unauthorized',
+		httpStatus: Some(401),
+	},
 ];
 
 describe('Exception subclasses', () => {
@@ -94,6 +136,22 @@ describe('Exception subclasses', () => {
 				expect((ex as Error & { cause?: unknown }).cause).toBe(inner);
 				expect(ex.toJSON().cause).toBe(inner);
 			});
+
+			spec.httpStatus.match(
+				(expected) => {
+					it(`extends HttpStatusException and exposes httpStatus ${expected}`, () => {
+						const ex = new spec.ctor();
+
+						expect(ex).toBeInstanceOf(HttpStatusException);
+						expect((spec.ctor as unknown as typeof HttpStatusException).httpStatus).toBe(expected);
+					});
+				},
+				() => {
+					it('does NOT extend HttpStatusException (library-internal, no HTTP mapping)', () => {
+						expect(new spec.ctor()).not.toBeInstanceOf(HttpStatusException);
+					});
+				},
+			);
 		});
 	}
 });

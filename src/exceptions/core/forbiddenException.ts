@@ -1,6 +1,8 @@
-import { Exception } from './exception';
+import { HttpStatusException } from './httpStatusException';
 
-export class ForbiddenException extends Exception {
+export class ForbiddenException extends HttpStatusException {
+	static readonly httpStatus = 403;
+
 	constructor(message?: string, options?: { cause?: unknown }) {
 		super(message || 'Forbidden', options);
 		this.name = 'ForbiddenException';

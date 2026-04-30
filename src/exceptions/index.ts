@@ -3,6 +3,7 @@ export * from './core/badRequestException';
 export * from './core/conflictException';
 export * from './core/exception';
 export * from './core/forbiddenException';
+export * from './core/httpStatusException';
 export * from './core/httpStatusExceptionFactory';
 export * from './core/internalServerErrorException';
 export * from './core/invalidStateException';

@@ -1,6 +1,8 @@
-import { Exception } from './exception';
+import { HttpStatusException } from './httpStatusException';
 
-export class InternalServerErrorException extends Exception {
+export class InternalServerErrorException extends HttpStatusException {
+	static readonly httpStatus = 500;
+
 	constructor(message?: string, options?: { cause?: unknown }) {
 		super(message || 'Internal Server Error', options);
 		this.name = 'InternalServerErrorException';

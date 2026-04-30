@@ -2,65 +2,84 @@
 /* eslint-disable @typescript-eslint/no-restricted-types */
 /* eslint-disable @typescript-eslint/naming-convention */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Option } from 'essentials:option';
+import { Exception } from 'essentials:exceptions';
+import type { IOption } from 'essentials:option';
+import { None, Option, Some } from 'essentials:option';
 import type { ICallback } from '../models/ICallback';
 
 /**
- * A "fire and forget" wrapper around an optional side-effect function.
+ * A wrapper around an optional function reference.
  *
- * The whole point of {@link Callback} is to let calling code invoke
- * `execute()` unconditionally without first checking whether a function
- * is registered. If one is registered, it runs. If not, a no-op runs.
- * Either way, {@link Callback.execute} returns `void | Promise<void>`
- * and is contractually side-effect-only \u2014 it does not surface a
- * meaningful return value, and it never throws to signal "no callback".
+ * {@link Callback} mirrors the strict contract of {@link Option} and
+ * {@link Result}: there is one set of methods that assume a callback
+ * is registered (and throw if it is not) and a parallel set that
+ * accept a fallback for the absent case.
  *
- * The generic is constrained to `(...args) => void | Promise<void>` to
- * make the side-effect-only contract visible in the type system.
+ *  - {@link Callback.execute} runs the registered callback and
+ *    returns its result. Throws {@link Exception} when no callback
+ *    is registered.
+ *  - {@link Callback.executeOr} runs the registered callback or
+ *    the supplied fallback and always returns a value of the
+ *    callback's return type.
+ *  - {@link Callback.handover} returns the registered callback.
+ *    Throws {@link Exception} when no callback is registered.
+ *  - {@link Callback.handoverOr} returns the registered callback
+ *    or the supplied fallback.
+ *  - {@link Callback.hasCallback} is the explicit pre-check, the
+ *    pendant of {@link Option.isSome}.
  */
-export class Callback<T extends (...args: any[]) => void | Promise<void>> implements ICallback<T> {
-	private readonly _callback: T;
-	private readonly _hasCallback: boolean;
+export class Callback<T extends (...args: any[]) => any> implements ICallback<T> {
+	private readonly _callback: IOption<T>;
 
-	private constructor(callback: T, hasCallback: boolean) {
+	private constructor(callback: IOption<T>) {
 		this._callback = callback;
-		this._hasCallback = hasCallback;
 	}
 
-	public static create<T extends (...args: any[]) => void | Promise<void>>(callback: T): Callback<T> {
-		return new Callback(callback, true);
+	public static create<T extends (...args: any[]) => any>(callback: T): Callback<T> {
+		return new Callback(Some(callback));
 	}
 
-	public static none<T extends (...args: any[]) => void | Promise<void>>(): Callback<T> {
-		const noop = (() => {
-			// Noop \u2014 returns undefined for any sync callback type.
-		}) as T;
-
-		return new Callback(noop, false);
+	public static none<T extends (...args: any[]) => any>(): Callback<T> {
+		return new Callback<T>(None());
 	}
 
-	public static from<T extends (...args: any[]) => void | Promise<void>>(callback: T | undefined): Callback<T> {
-		return Option.from(callback).match(
-			(cb) => Callback.create(cb),
-			() => Callback.none(),
-		);
+	public static from<T extends (...args: any[]) => any>(callback: T | undefined): Callback<T> {
+		return new Callback(Option.from(callback));
 	}
 
-	public exists(): boolean {
-		return this._hasCallback;
+	public get hasCallback(): boolean {
+		return this._callback.isSome;
 	}
 
-	public execute(...args: Parameters<T>): void | Promise<void> {
-		return this._callback(...args);
+	public execute(...args: Parameters<T>): ReturnType<T> {
+		if (this._callback.isNone) {
+			throw new Exception('Cannot execute Callback: no callback registered');
+		}
+
+		return this._callback.unwrap()(...args) as ReturnType<T>;
 	}
 
-	public executeOr(orExecute: T, ...args: Parameters<T>): void | Promise<void> {
-		if (!this._hasCallback) return orExecute(...args);
+	public executeOr(or: T, ...args: Parameters<T>): ReturnType<T> {
+		if (this._callback.isNone) {
+			return or(...args) as ReturnType<T>;
+		}
 
-		return this._callback(...args);
+		return this._callback.unwrap()(...args) as ReturnType<T>;
 	}
 
 	public handover(): T {
-		return this._callback;
+		if (this._callback.isNone) {
+			throw new Exception('Cannot handover Callback: no callback registered');
+		}
+
+		return this._callback.unwrap();
+	}
+
+	public handoverOr(or: T): T {
+		if (this._callback.isNone) {
+			return or;
+		}
+
+		return this._callback.unwrap();
 	}
 }

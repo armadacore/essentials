@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-export interface ICallback<T extends (...args: any[]) => void | Promise<void>> {
-	exists(): boolean;
-	execute(...args: Parameters<T>): void | Promise<void>;
-	executeOr(orExecute: T, ...args: Parameters<T>): void | Promise<void>;
+export interface ICallback<T extends (...args: any[]) => any> {
+	get hasCallback(): boolean;
+	execute(...args: Parameters<T>): ReturnType<T>;
+	executeOr(or: T, ...args: Parameters<T>): ReturnType<T>;
 	handover(): T;
+	handoverOr(or: T): T;
 }

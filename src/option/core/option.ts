@@ -36,11 +36,23 @@ export const toJsonObject = <T>(value: T): unknown => {
 	if (typeof value !== 'object') return value;
 	if (Array.isArray(value)) return value.map(toJsonObject);
 	if (value instanceof OptionBase) {
-		return {
-			isSome: value.isSome,
-			isNone: value.isNone,
-			value: toJsonObject(value.getValue()),
-		};
+		return value.match(
+			(inner) => ({
+				isSome: true,
+				isNone: false,
+				value: toJsonObject(inner),
+			}),
+			() => ({
+				isSome: false,
+				isNone: true,
+				// Preserve the historical recursive-envelope shape of
+				// `toJsonObject(value.getValue())` on None: getValue()
+				// returned undefined, which Option.from(undefined) wrapped
+				// into another None envelope. F-14 keeps this behaviour
+				// pinned until the toOption/toJsonObject redesign in #30.
+				value: toJsonObject(undefined),
+			}),
+		);
 	}
 
 	return Object.fromEntries(

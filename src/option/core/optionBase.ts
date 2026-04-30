@@ -29,7 +29,7 @@ export abstract class OptionBase<T> implements IOption<T> {
 	abstract readonly isSome: boolean;
 	abstract readonly isNone: boolean;
 
-	abstract getValue(): T | undefined;
+	protected abstract getValue(): T | undefined;
 
 	unwrap(): T {
 		if (this.isSome) return this.getValue() as T;

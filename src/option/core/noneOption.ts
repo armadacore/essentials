@@ -4,7 +4,7 @@ export class NoneOption<T> extends OptionBase<T> {
 	readonly isSome = false;
 	readonly isNone = true;
 
-	getValue(): undefined {
+	protected getValue(): undefined {
 		return undefined;
 	}
 }

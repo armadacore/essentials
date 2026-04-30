@@ -8,7 +8,7 @@ export class SomeOption<T> extends OptionBase<T> {
 		super();
 	}
 
-	getValue(): T {
+	protected getValue(): T {
 		return this.value;
 	}
 }

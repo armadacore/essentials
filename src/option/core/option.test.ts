@@ -110,6 +110,10 @@ describe('Option (as-is behaviour)', () => {
 			expect(Option.toJsonString).toBe(toJsonString);
 		});
 
+		it('Option.toJsonObject is the same function reference as toJsonObject', () => {
+			expect(Option.toJsonObject).toBe(toJsonObject);
+		});
+
 		it('Option.toOption is the same function reference as toOption', () => {
 			expect(Option.toOption).toBe(toOption);
 		});

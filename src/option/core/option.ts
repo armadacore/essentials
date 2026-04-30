@@ -62,6 +62,7 @@ export const toOption = <T>(value: unknown): IOption<T> => {
 export const Option = {
 	some: Some,
 	none: None,
+	toJsonObject,
 	toJsonString,
 	toOption,
 

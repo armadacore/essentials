@@ -695,9 +695,9 @@ HTTP-Statuscode-zentrierte Exception-Hierarchie mit `info`-Tag (machine-readable
 
 | # | Aktion | Findings | Dateien |
 |---|---|---|---|
-| 15 | `.rules/barrel-exports.md` abstimmen: Implementierungsklassen nicht im Barrel | F-15, F-16, F-40 | neu |
-| 16 | `option/index.ts` und `result/index.ts` aufräumen | F-15, F-16, F-40 | beide `index.ts` |
-| 17 | `toJsonObject`/`toJsonString`/`toOption` in `Option`-Namespace einsortieren | F-15 | `option/core/option.ts` |
+| 15 | ✅ **Erledigt:** `.rules/barrel-exports.md` angelegt. Konvention: Barrels exportieren ausschließlich öffentliche API (Interfaces, Factories, Namespaces, Guards, Exceptions, Free Functions). Implementierungsklassen sind interne Details. | F-15, F-16, F-40 | `.rules/barrel-exports.md` (neu) |
+| 16 | ✅ **Erledigt:** `option/index.ts` und `result/index.ts` aufgeräumt — `SomeOption`/`NoneOption`/`OkResult`/`ErrResult` aus den Barrels entfernt (Variante A: Implementierungsklassen internal). Library-interne Importe (Tests, Schwester-Dateien) gehen weiterhin direkt aus den Quelldateien. **Breaking Change** für Konsumenten, die `instanceof SomeOption`/`new OkResult(...)` etc. genutzt haben. | F-15, F-16, F-40 | `option/index.ts`, `result/index.ts` |
+| 17 | ✅ **Erledigt:** `toJsonObject` zusätzlich in den `Option`-Namespace aufgenommen (`toJsonString` und `toOption` waren bereits drin). Top-Level-Re-Exporte bleiben bestehen — Konsumenten können beide Stile nutzen. Kleiner Smoke-Test ergänzt. | F-15 | `option/core/option.ts`, `option/core/option.test.ts` |
 | 18 | `.rules/eslint-overrides-for-monads.md` abstimmen: Override-Section für `option/**`; pro-Datei-Disables raus | F-25, F-05, F-51 | `eslint.config.js`, Cleanups |
 | 19 | ✅ **Erledigt (`0359309`):** Result-Tippfehler korrigiert (`isnt in a error state` → `isn't in an error state`; `isn't in a ok state` → `isn't in an ok state`). Test-Regexes mit-aktualisiert. | F-28 | `result/core/{okResult,errResult}.ts`, `result.test.ts` |
 | 20 | `.rules/intra-feature-imports.md` abstimmen | F-01, F-24, F-38 | neu |

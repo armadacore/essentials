@@ -1,7 +1,7 @@
 import { InvalidStateException } from 'essentials:exceptions';
 import { type IOption } from '../models/IOption';
 import { NoneOption } from './noneOption';
-import { OptionBase } from './optionBase';
+import { OptionBase, optionFactories } from './optionBase';
 import { SomeOption } from './someOption';
 
 const isJsonString = (value: unknown): value is string => {
@@ -23,6 +23,13 @@ export const Some = <T>(value: T): IOption<T> => {
 export const None = <T>(): IOption<T> => {
 	return new NoneOption<never>();
 };
+
+// Wire the late-binding bridge so OptionBase methods (`map`, `andThen`,
+// `filter`, …) can construct fresh Option values without a top-level
+// import on this module. See the docstring of `optionFactories` in
+// optionBase.ts.
+optionFactories.some = Some;
+optionFactories.none = None;
 
 export const toJsonObject = <T>(value: T): unknown => {
 	if (Option.from(value).isNone) return { isSome: false, isNone: true, value };

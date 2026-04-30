@@ -1,6 +1,29 @@
 import { Exception, InvalidStateException } from 'essentials:exceptions';
 import { type IResult } from '../models/IResult';
-import { Err, Ok } from './result';
+
+/**
+ * Internal late-binding bridge that lets {@link ResultBase} call back
+ * into the {@link Ok} / {@link Err} factories without a top-level
+ * `import { Ok, Err } from './result'`. The latter would create a
+ * module-init cycle (result → resultBase → result) that crashes
+ * whenever the barrel is loaded with `isResult` (or any other
+ * value-import on `ResultBase`) in the wrong order.
+ *
+ * `result.ts` populates these slots immediately after defining its
+ * factories. Methods on `ResultBase` only read the slots at call time,
+ * never at module-init time.
+ */
+export const resultFactories: {
+	ok: <U>(value: U) => IResult<U>;
+	err: <U>(error: Exception) => IResult<U>;
+} = {
+	ok: () => {
+		throw new InvalidStateException('resultFactories.ok accessed before initialisation');
+	},
+	err: () => {
+		throw new InvalidStateException('resultFactories.err accessed before initialisation');
+	},
+};
 
 export abstract class ResultBase<T> implements IResult<T> {
 	abstract readonly isOk: boolean;
@@ -10,19 +33,19 @@ export abstract class ResultBase<T> implements IResult<T> {
 	abstract err(): Exception;
 
 	map<U>(fn: (value: T) => U): IResult<U> {
-		return this.isOk ? Ok(fn(this.ok() as T)) : Err(this.err() as Exception);
+		return this.isOk ? resultFactories.ok(fn(this.ok() as T)) : resultFactories.err(this.err() as Exception);
 	}
 
 	mapErr(fn: (error: Exception) => Exception): IResult<T> {
-		return this.isErr ? Err(fn(this.err() as Exception)) : Ok(this.ok() as T);
+		return this.isErr ? resultFactories.err(fn(this.err() as Exception)) : resultFactories.ok(this.ok() as T);
 	}
 
 	and<U>(res: IResult<U>): IResult<U> {
-		return this.isOk ? res : Err(this.err() as Exception);
+		return this.isOk ? res : resultFactories.err(this.err() as Exception);
 	}
 
 	andThen<U>(fn: (value: T) => IResult<U>): IResult<U> {
-		return this.isOk ? fn(this.ok() as T) : Err(this.err() as Exception);
+		return this.isOk ? fn(this.ok() as T) : resultFactories.err(this.err() as Exception);
 	}
 
 	or(res: IResult<T>): IResult<T> {
@@ -30,7 +53,7 @@ export abstract class ResultBase<T> implements IResult<T> {
 	}
 
 	orElse(fn: (error: Exception) => IResult<T>): IResult<T> {
-		return this.isErr ? fn(this.err() as Exception) : Ok(this.ok() as T);
+		return this.isErr ? fn(this.err() as Exception) : resultFactories.ok(this.ok() as T);
 	}
 
 	unwrap(): T {

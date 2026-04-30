@@ -1,6 +1,29 @@
 import { InvalidStateException } from 'essentials:exceptions';
 import { type IOption } from '../models/IOption';
-import { None, Some } from './option';
+
+/**
+ * Internal late-binding bridge that lets {@link OptionBase} call back
+ * into the {@link Some} / {@link None} factories without a top-level
+ * `import { Some, None } from './option'`. The latter would create a
+ * module-init cycle (option → optionBase → option) that crashes
+ * whenever the barrel is loaded with `isOption` (or any other
+ * value-import on `OptionBase`) in the wrong order.
+ *
+ * `option.ts` populates these slots immediately after defining its
+ * factories. Methods on `OptionBase` only read the slots at call time,
+ * never at module-init time.
+ */
+export const optionFactories: {
+	some: <U>(value: U) => IOption<U>;
+	none: <U>() => IOption<U>;
+} = {
+	some: () => {
+		throw new InvalidStateException('optionFactories.some accessed before initialisation');
+	},
+	none: () => {
+		throw new InvalidStateException('optionFactories.none accessed before initialisation');
+	},
+};
 
 export abstract class OptionBase<T> implements IOption<T> {
 	abstract readonly isSome: boolean;
@@ -35,7 +58,7 @@ export abstract class OptionBase<T> implements IOption<T> {
 	}
 
 	map<U>(fn: (value: T) => U): IOption<U> {
-		return this.isSome ? Some(fn(this.getValue() as T)) : None();
+		return this.isSome ? optionFactories.some(fn(this.getValue() as T)) : optionFactories.none();
 	}
 
 	mapOr<U>(defaultValue: U, fn: (value: T) => U): U {
@@ -47,11 +70,11 @@ export abstract class OptionBase<T> implements IOption<T> {
 	}
 
 	and<U>(other: IOption<U>): IOption<U> {
-		return this.isSome ? other : None();
+		return this.isSome ? other : optionFactories.none();
 	}
 
 	andThen<U>(fn: (value: T) => IOption<U>): IOption<U> {
-		return this.isSome ? fn(this.getValue() as T) : None();
+		return this.isSome ? fn(this.getValue() as T) : optionFactories.none();
 	}
 
 	onSome(fn: (value: T) => void): void {
@@ -71,7 +94,7 @@ export abstract class OptionBase<T> implements IOption<T> {
 	}
 
 	filter(predicate: (value: T) => boolean): IOption<T> {
-		return this.isSome && predicate(this.getValue() as T) ? this : None();
+		return this.isSome && predicate(this.getValue() as T) ? this : optionFactories.none();
 	}
 
 	match<U>(onSome: (value: T) => U, onNone: () => U): U {

@@ -1,3 +1,3 @@
 export * from './models/IOption';
-export * from './guards/isOption';
 export * from './core/option';
+export * from './guards/isOption';

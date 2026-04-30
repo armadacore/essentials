@@ -91,4 +91,43 @@ export default defineConfig([
 			'no-redeclare': 'off',
 		},
 	},
+
+	// ============================================================
+	// MONAD OVERRIDES
+	//
+	// Option, Callback and Exception are by their nature the place
+	// where the library bridges raw `undefined` / `null` / `any` /
+	// `T | undefined` from the JavaScript runtime into typed,
+	// monadic primitives. The lint rules that ban these patterns
+	// in consumer code apply elsewhere as usual; here they are
+	// structurally impossible to satisfy.
+	//
+	// See `.rules/eslint-overrides-for-monads.md`.
+	// ============================================================
+	{
+		files: ['src/option/**/*.ts'],
+		rules: {
+			'no-undefined': 'off',
+			'no-restricted-syntax': 'off',
+			'no-null/no-null': 'off',
+			'@typescript-eslint/no-restricted-types': 'off',
+			'@typescript-eslint/no-explicit-any': 'off',
+		},
+	},
+	{
+		files: ['src/callback/**/*.ts'],
+		rules: {
+			'no-restricted-syntax': 'off',
+			'@typescript-eslint/no-restricted-types': 'off',
+			'@typescript-eslint/no-explicit-any': 'off',
+		},
+	},
+	{
+		files: ['src/exceptions/core/exception.ts'],
+		rules: {
+			'no-undefined': 'off',
+			'no-restricted-syntax': 'off',
+			'@typescript-eslint/no-restricted-types': 'off',
+		},
+	},
 ]);

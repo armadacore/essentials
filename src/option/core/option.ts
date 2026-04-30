@@ -1,4 +1,3 @@
-/* eslint-disable no-undefined, no-restricted-syntax, no-null/no-null, @typescript-eslint/no-explicit-any, @typescript-eslint/no-restricted-types */
 import { InvalidStateException } from 'essentials:exceptions';
 import { type IOption } from '../models/IOption';
 import { NoneOption } from './noneOption';

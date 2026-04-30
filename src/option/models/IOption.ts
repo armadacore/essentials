@@ -1,4 +1,3 @@
-/* eslint-disable no-restricted-syntax, @typescript-eslint/no-restricted-types */
 export interface IOption<T> {
 	readonly isSome: boolean;
 	readonly isNone: boolean;

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-restricted-types, no-undefined */
 import { OptionBase } from './optionBase';
 
 export class NoneOption<T> extends OptionBase<T> {

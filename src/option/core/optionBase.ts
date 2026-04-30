@@ -1,4 +1,3 @@
-/* eslint-disable no-restricted-syntax, @typescript-eslint/no-restricted-types */
 import { InvalidStateException } from 'essentials:exceptions';
 import { type IOption } from '../models/IOption';
 import { None, Some } from './option';
@@ -27,7 +26,6 @@ export abstract class OptionBase<T> implements IOption<T> {
 	}
 
 	unwrapOrNull(): T | null {
-		// eslint-disable-next-line no-null/no-null
 		return this.isSome ? (this.getValue() as T) : null;
 	}
 

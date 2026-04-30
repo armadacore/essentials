@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- Callback wraps arbitrary function shapes; the open generic `T extends (...args: any[]) => any` is the signature constraint pattern recommended by TypeScript and cannot be expressed with `unknown`. */
-/* eslint-disable @typescript-eslint/no-restricted-types, no-restricted-syntax -- `Callback.from(callback?: T)` mirrors `Option.from` and intentionally accepts `T | undefined` at the API boundary; it is the only place outside Option that bridges raw `undefined` into the monad. */
 import { InvalidStateException } from 'essentials:exceptions';
 import type { IOption } from 'essentials:option';
 import { None, Option, Some } from 'essentials:option';

@@ -1,6 +1,3 @@
-/* eslint-disable no-undefined */
-/* eslint-disable no-restricted-syntax */
-/* eslint-disable @typescript-eslint/no-restricted-types */
 import { type IException } from '../models/IException';
 
 /**

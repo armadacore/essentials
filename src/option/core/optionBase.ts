@@ -1,5 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unused-expressions */
-/* eslint-disable no-undefined, no-restricted-syntax, @typescript-eslint/no-restricted-types */
+/* eslint-disable no-restricted-syntax, @typescript-eslint/no-restricted-types */
 import { Exception } from 'essentials:exceptions';
 import { type IOption } from '../models/IOption';
 import { None, Some } from './option';
@@ -11,21 +10,16 @@ export abstract class OptionBase<T> implements IOption<T> {
 	abstract getValue(): T | undefined;
 
 	unwrap(): T {
-		const value = this.getValue();
-		if (value !== undefined) return value;
+		if (this.isSome) return this.getValue() as T;
 		throw new Exception('Called unwrap on a None value');
 	}
 
 	unwrapOr(defaultValue: T): T {
-		const value = this.getValue();
-
-		return value !== undefined ? value : defaultValue;
+		return this.isSome ? (this.getValue() as T) : defaultValue;
 	}
 
 	unwrapOrElse(fn: () => T): T {
-		const value = this.getValue();
-
-		return value !== undefined ? value : fn();
+		return this.isSome ? (this.getValue() as T) : fn();
 	}
 
 	unwrapOrUndefined(): T | undefined {
@@ -33,34 +27,25 @@ export abstract class OptionBase<T> implements IOption<T> {
 	}
 
 	unwrapOrNull(): T | null {
-		const value = this.getValue();
-
 		// eslint-disable-next-line no-null/no-null
-		return value !== undefined ? value : null;
+		return this.isSome ? (this.getValue() as T) : null;
 	}
 
 	expect(message: string): T {
-		const value = this.getValue();
-		if (value !== undefined) return value;
+		if (this.isSome) return this.getValue() as T;
 		throw new Exception(message);
 	}
 
 	map<U>(fn: (value: T) => U): IOption<U> {
-		const value = this.getValue();
-
-		return value !== undefined ? Some(fn(value)) : None();
+		return this.isSome ? Some(fn(this.getValue() as T)) : None();
 	}
 
 	mapOr<U>(defaultValue: U, fn: (value: T) => U): U {
-		const value = this.getValue();
-
-		return value !== undefined ? fn(value) : defaultValue;
+		return this.isSome ? fn(this.getValue() as T) : defaultValue;
 	}
 
 	mapOrElse<U>(defaultFn: () => U, fn: (value: T) => U): U {
-		const value = this.getValue();
-
-		return value !== undefined ? fn(value) : defaultFn();
+		return this.isSome ? fn(this.getValue() as T) : defaultFn();
 	}
 
 	and<U>(other: IOption<U>): IOption<U> {
@@ -68,19 +53,15 @@ export abstract class OptionBase<T> implements IOption<T> {
 	}
 
 	andThen<U>(fn: (value: T) => IOption<U>): IOption<U> {
-		const value = this.getValue();
-
-		return value !== undefined ? fn(value) : None();
+		return this.isSome ? fn(this.getValue() as T) : None();
 	}
 
 	onSome(fn: (value: T) => void): void {
-		const value = this.getValue();
-		value !== undefined && fn(value);
+		if (this.isSome) fn(this.getValue() as T);
 	}
 
 	onNone(fn: () => void): void {
-		const value = this.getValue();
-		value === undefined && fn();
+		if (this.isNone) fn();
 	}
 
 	or(other: IOption<T>): IOption<T> {
@@ -92,26 +73,18 @@ export abstract class OptionBase<T> implements IOption<T> {
 	}
 
 	filter(predicate: (value: T) => boolean): IOption<T> {
-		const value = this.getValue();
-
-		return value !== undefined && predicate(value) ? this : None();
+		return this.isSome && predicate(this.getValue() as T) ? this : None();
 	}
 
 	match<U>(onSome: (value: T) => U, onNone: () => U): U {
-		const value = this.getValue();
-
-		return value !== undefined ? onSome(value) : onNone();
+		return this.isSome ? onSome(this.getValue() as T) : onNone();
 	}
 
 	toArray(): T[] {
-		const value = this.getValue();
-
-		return value !== undefined ? [value] : [];
+		return this.isSome ? [this.getValue() as T] : [];
 	}
 
 	toString(): string {
-		const value = this.getValue();
-
-		return value !== undefined ? `Some(${value})` : 'None';
+		return this.isSome ? `Some(${String(this.getValue())})` : 'None';
 	}
 }

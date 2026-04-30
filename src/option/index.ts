@@ -1,5 +1,4 @@
 export * from './models/IOption';
-export * from './models/AsOptional';
 export * from './guards/isOption';
 export * from './core/option';
 export * from './core/noneOption';

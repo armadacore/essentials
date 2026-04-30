@@ -6,12 +6,14 @@ import { Err, Ok } from 'essentials:result';
 import { isResult } from './isResult';
 
 /**
- * Tests document the CURRENT (as-is) duck-typed behaviour of
- * {@link isResult}. The guard accepts ANY object that has both
- * `isOk` and `isErr` keys (and either a `value` key or
- * `isOk === false`).
+ * Tests document the strict behaviour of {@link isResult}: only true
+ * instances of {@link ResultBase} (i.e. objects produced by
+ * {@link Ok} or {@link Err}) are accepted. Duck-typed objects with
+ * the right property shape are rejected because their methods
+ * (`unwrap`, `map`, `match`, …) would not actually be present at
+ * runtime — see ANALYSIS.md (F-17, Sprint 4 #28).
  */
-describe('isResult (as-is behaviour)', () => {
+describe('isResult', () => {
 	it('accepts a real Ok', () => {
 		expect(isResult(Ok(1))).toBe(true);
 	});
@@ -20,12 +22,12 @@ describe('isResult (as-is behaviour)', () => {
 		expect(isResult(Err(new Exception('boom')))).toBe(true);
 	});
 
-	it('accepts a duck-typed Ok-shaped object', () => {
-		expect(isResult({ isOk: true, isErr: false, value: 1 })).toBe(true);
+	it('rejects a duck-typed Ok-shaped object', () => {
+		expect(isResult({ isOk: true, isErr: false, value: 1 })).toBe(false);
 	});
 
-	it('accepts a duck-typed Err-shaped object without value', () => {
-		expect(isResult({ isOk: false, isErr: true })).toBe(true);
+	it('rejects a duck-typed Err-shaped object', () => {
+		expect(isResult({ isOk: false, isErr: true })).toBe(false);
 	});
 
 	it('rejects an object missing isErr', () => {

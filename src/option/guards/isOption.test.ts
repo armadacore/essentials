@@ -5,15 +5,14 @@ import { None, Some } from '../core/option';
 import { isOption } from './isOption';
 
 /**
- * Tests document the CURRENT (as-is) duck-typed behaviour of
- * {@link isOption}. The guard accepts ANY object that has both
- * `isSome` and `isNone` keys (and either a `value` key or
- * `isSome === false`), not just instances of `OptionBase`.
- *
- * That permissiveness is documented in ANALYSIS.md (F-17) \u2014 do
- * not change the assertions without explicit approval.
+ * Tests document the strict behaviour of {@link isOption}: only true
+ * instances of {@link OptionBase} (i.e. objects produced by
+ * {@link Some} or {@link None}) are accepted. Duck-typed objects
+ * with the right property shape are rejected because their methods
+ * (`unwrap`, `map`, `match`, …) would not actually be present at
+ * runtime — see ANALYSIS.md (F-17, Sprint 4 #28).
  */
-describe('isOption (as-is behaviour)', () => {
+describe('isOption', () => {
 	it('accepts a real Some', () => {
 		expect(isOption(Some(1))).toBe(true);
 	});
@@ -22,12 +21,12 @@ describe('isOption (as-is behaviour)', () => {
 		expect(isOption(None())).toBe(true);
 	});
 
-	it('accepts a duck-typed Some-shaped object (F-17 pinned)', () => {
-		expect(isOption({ isSome: true, isNone: false, value: 42 })).toBe(true);
+	it('rejects a duck-typed Some-shaped object', () => {
+		expect(isOption({ isSome: true, isNone: false, value: 42 })).toBe(false);
 	});
 
-	it('accepts a duck-typed None-shaped object without value', () => {
-		expect(isOption({ isSome: false, isNone: true })).toBe(true);
+	it('rejects a duck-typed None-shaped object', () => {
+		expect(isOption({ isSome: false, isNone: true })).toBe(false);
 	});
 
 	it('rejects an object missing isNone', () => {

@@ -1,15 +1,5 @@
 import { OptionBase } from '../core/optionBase';
 
-export const isOption = <T>(option: unknown): option is OptionBase<T> => {
-	if (
-		option &&
-		typeof option === 'object' &&
-		'isSome' in option &&
-		'isNone' in option &&
-		('value' in option || option.isSome === false)
-	) {
-		return true;
-	}
-
-	return false;
+export const isOption = <T>(value: unknown): value is OptionBase<T> => {
+	return value instanceof OptionBase;
 };

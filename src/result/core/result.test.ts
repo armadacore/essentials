@@ -148,7 +148,11 @@ describe('ResultBase API (as-is behaviour)', () => {
 
 	describe('map', () => {
 		it('Ok: applies fn and returns Ok<U>', () => {
-			expect(Ok(2).map((n) => n * 3).unwrap()).toBe(6);
+			expect(
+				Ok(2)
+					.map((n) => n * 3)
+					.unwrap(),
+			).toBe(6);
 		});
 
 		it('Err: propagates without invoking fn', () => {
@@ -192,7 +196,11 @@ describe('ResultBase API (as-is behaviour)', () => {
 		});
 
 		it('andThen: chains for Ok', () => {
-			expect(Ok(2).andThen((n) => Ok(n * 5)).unwrap()).toBe(10);
+			expect(
+				Ok(2)
+					.andThen((n) => Ok(n * 5))
+					.unwrap(),
+			).toBe(10);
 		});
 
 		it('andThen: short-circuits Err without invoking fn', () => {
@@ -332,7 +340,12 @@ describe('ResultBase API (as-is behaviour)', () => {
 
 	describe('match', () => {
 		it('runs the Ok branch for Ok', () => {
-			expect(Ok(2).match((n) => n + 1, () => 0)).toBe(3);
+			expect(
+				Ok(2).match(
+					(n) => n + 1,
+					() => 0,
+				),
+			).toBe(3);
 		});
 
 		it('runs the Err branch for Err with the error', () => {

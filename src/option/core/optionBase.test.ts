@@ -70,7 +70,11 @@ describe('OptionBase API (as-is behaviour)', () => {
 
 	describe('map / mapOr / mapOrElse', () => {
 		it('map applies fn to Some and produces Some<U>', () => {
-			expect(Some(2).map((n) => n * 3).unwrap()).toBe(6);
+			expect(
+				Some(2)
+					.map((n) => n * 3)
+					.unwrap(),
+			).toBe(6);
 		});
 
 		it('map on None propagates None without invoking fn', () => {
@@ -88,7 +92,12 @@ describe('OptionBase API (as-is behaviour)', () => {
 		});
 
 		it('mapOrElse returns the mapped value for Some', () => {
-			expect(Some(2).mapOrElse(() => 0, (n) => n * 3)).toBe(6);
+			expect(
+				Some(2).mapOrElse(
+					() => 0,
+					(n) => n * 3,
+				),
+			).toBe(6);
 		});
 
 		it('mapOrElse invokes the default fn for None', () => {
@@ -110,7 +119,9 @@ describe('OptionBase API (as-is behaviour)', () => {
 
 		it('andThen chains for Some', () => {
 			expect(
-				Some(2).andThen((n) => Some(n * 5)).unwrap(),
+				Some(2)
+					.andThen((n) => Some(n * 5))
+					.unwrap(),
 			).toBe(10);
 		});
 
@@ -190,11 +201,21 @@ describe('OptionBase API (as-is behaviour)', () => {
 
 	describe('match', () => {
 		it('runs the Some branch for Some', () => {
-			expect(Some(2).match((n) => n + 1, () => 0)).toBe(3);
+			expect(
+				Some(2).match(
+					(n) => n + 1,
+					() => 0,
+				),
+			).toBe(3);
 		});
 
 		it('runs the None branch for None', () => {
-			expect(None<number>().match((n) => n + 1, () => 99)).toBe(99);
+			expect(
+				None<number>().match(
+					(n) => n + 1,
+					() => 99,
+				),
+			).toBe(99);
 		});
 	});
 

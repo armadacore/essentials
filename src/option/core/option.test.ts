@@ -1,6 +1,5 @@
- 
 /* eslint-disable no-undefined */
- 
+
 /* eslint-disable no-null/no-null */
 import { describe, expect, it } from 'vitest';
 import { InvalidStateException } from 'essentials:exceptions';
@@ -91,9 +90,7 @@ describe('Option (as-is behaviour)', () => {
 		it('does not protect against null/undefined when the predicate is true', () => {
 			// `fromPredicate` calls `Some(value)` directly when truthy, so
 			// passing `null` with a truthy predicate hits the Some-throw.
-			expect(() =>
-				Option.fromPredicate<unknown>(null, () => true),
-			).toThrow(InvalidStateException);
+			expect(() => Option.fromPredicate<unknown>(null, () => true)).toThrow(InvalidStateException);
 		});
 	});
 
@@ -221,16 +218,16 @@ describe('Option (as-is behaviour)', () => {
 		});
 
 		it('recurses into arrays returning an array of Options (untyped)', () => {
-			const restored = toOption([{ isSome: true, isNone: false, value: 1 }, { isSome: false, isNone: true }]);
+			const restored = toOption([
+				{ isSome: true, isNone: false, value: 1 },
+				{ isSome: false, isNone: true },
+			]);
 
 			expect(Array.isArray(restored)).toBe(true);
 		});
 
 		it('recurses into plain objects', () => {
-			const restored = toOption({ a: { isSome: true, isNone: false, value: 1 } }) as Record<
-				string,
-				OptionBase<number>
-			>;
+			const restored = toOption({ a: { isSome: true, isNone: false, value: 1 } }) as Record<string, OptionBase<number>>;
 
 			expect(restored['a']?.unwrap()).toBe(1);
 		});

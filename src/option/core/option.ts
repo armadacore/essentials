@@ -6,6 +6,17 @@ import { NoneOption } from './noneOption';
 import { optionFactories } from './optionBase';
 import { SomeOption } from './someOption';
 
+/**
+ * Constructs a {@link Some} variant of {@link IOption} carrying
+ * `value`.
+ *
+ * Rejects `null` and `undefined` outright — `Some` always carries a
+ * present value. To lift a possibly-nullish value safely use
+ * {@link Option.from} instead. Falsy non-nullish values (`0`, `''`,
+ * `false`, `NaN`) are accepted; they are values, not absence.
+ *
+ * @throws {InvalidStateException} if `value` is `null` or `undefined`.
+ */
 export const Some = <T>(value: T): IOption<T> => {
 	if (value === null || value === undefined) {
 		throw new InvalidStateException('Cannot create Some with null or undefined');
@@ -14,6 +25,11 @@ export const Some = <T>(value: T): IOption<T> => {
 	return new SomeOption(value);
 };
 
+/**
+ * Constructs a {@link None} variant of {@link IOption}. Carries no
+ * value; the type parameter `T` only flows through for downstream
+ * `map` / `andThen` chains.
+ */
 export const None = <T>(): IOption<T> => {
 	return new NoneOption<never>();
 };
@@ -61,16 +77,38 @@ const deserialize = <T>(envelope: SerializedOption<T>): IOption<T> => {
 	throw new InvalidStateException('deserialize received a value that is not a SerializedOption envelope');
 };
 
+/**
+ * Namespace bundling all {@link IOption}-related factories,
+ * conversions and predicates. Prefer this over the top-level
+ * {@link Some} / {@link None} factories when you want a single import
+ * surface (`import { Option } from 'essentials:option'`).
+ */
 export const Option = {
+	/** Alias for the top-level {@link Some} factory. */
 	some: Some,
+
+	/** Alias for the top-level {@link None} factory. */
 	none: None,
+
 	serialize,
 	deserialize,
 
+	/**
+	 * Lifts a possibly-nullish value into an {@link IOption}: returns
+	 * {@link Some} for any non-`null`, non-`undefined` value (falsy
+	 * primitives like `0` / `''` / `false` included), {@link None}
+	 * otherwise.
+	 */
 	from: <T>(value: T | null | undefined): IOption<T> => {
 		return value !== null && value !== undefined ? Some(value) : None();
 	},
 
+	/**
+	 * Returns {@link Some} carrying `value` if `predicate(value)` is
+	 * truthy, otherwise {@link None}. Note: `predicate` is always
+	 * called — pass an already-truthy value if you want a guaranteed
+	 * {@link Some}.
+	 */
 	fromPredicate: <T>(value: T, predicate: (value: T) => boolean): IOption<T> => {
 		return predicate(value) ? Some(value) : None();
 	},

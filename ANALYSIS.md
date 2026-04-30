@@ -482,7 +482,7 @@ HTTP-Statuscode-zentrierte Exception-Hierarchie mit `info`-Tag (machine-readable
 | ID | Feature | Schwere | Beschreibung |
 |---|---|---|---|
 | F-08 | callback | **hoch** | ~~`executeOr` gibt args nicht an Fallback weiter~~ — **resolved (Sprint 1, Commit `9907cde`)**: `executeOr` reicht Spread-Args an Fallback weiter. |
-| F-12 | option | **hoch** | `T extends undefined` nicht modellierbar |
+| F-12 | option | **hoch** | ~~`T extends undefined` nicht modellierbar~~ — **resolved (Sprint 2, Commit `78ecd4e`)**: alle `OptionBase`-Methoden diskriminieren über `this.isSome`/`this.isNone` statt `value !== undefined`. |
 | F-41 | exceptions | **hoch** | ~~`cause` nicht an Native-Error weitergereicht~~ — **resolved (Sprint 1, Commit `851ad0a`)**: `super(message, options)` reicht `cause` durch; `options`-Feld entfernt. |
 | F-49 | exceptions | **hoch** | ~~`toJSON` exposed `_info` statt `info` (API-Vertragsbruch)~~ — **resolved (Sprint 1, Commit `851ad0a`)**: JSON-Key heißt jetzt `info`. |
 | F-50 | exceptions | **hoch** | ~~`toJSON` enthält `stack` (Security-Risiko)~~ — **resolved (Sprint 1, Commit `851ad0a`)**: `stack` aus `toJSON` entfernt. |
@@ -490,8 +490,8 @@ HTTP-Statuscode-zentrierte Exception-Hierarchie mit `info`-Tag (machine-readable
 | F-07 | callback | mittel | ~~`handover()` Typ-Lüge~~ — **resolved (Callback-Refactor, Commit `b7d3c24`)**: `handover()` wirft jetzt `Exception` bei `none()`; kein Noop-Fallback mehr. |
 | F-13 | option | mittel | `toOption` Signatur lügt |
 | F-14 | option | mittel | Round-Trip nicht verlustfrei |
-| F-29 | result | mittel | `unwrap()` verliert Stack-Trace |
-| F-30 | result | mittel | `expect`/`expectErr` degradieren Original-Exception |
+| F-29 | result | mittel | ~~`unwrap()` verliert Stack-Trace~~ — **resolved (Sprint 2, Commit `7352c14`)**: `Exception(message, { cause: this.err() })` reicht Original-Err inkl. Stack/Subtyp/`info`-Tag durch. |
+| F-30 | result | mittel | ~~`expect`/`expectErr` degradieren Original-Exception~~ — **resolved (Sprint 2, Commit `7352c14`)**: `cause`-Chain analog zu F-29. |
 | F-31 | result | niedrig | `isResult`-Predicate behauptet Unmögliches |
 
 ### Design-/Architektur-Fragen
@@ -531,7 +531,7 @@ HTTP-Statuscode-zentrierte Exception-Hierarchie mit `info`-Tag (machine-readable
 | ID | Beschreibung |
 |---|---|
 | F-02 | Fehlendes Semikolon Root `index.ts` |
-| F-20 | `&&`-Hack in `onSome`/`onNone` |
+| F-20 | ~~`&&`-Hack in `onSome`/`onNone`~~ — **resolved (Sprint 2, Commit `78ecd4e`)**: durch `if (this.isSome) fn(...)` ersetzt; `no-unused-expressions`-Disable konnte entfallen. |
 | F-28 | Tippfehler in Result-Error-Messages |
 | F-33 | `Result.from` reduziert non-Error-Würfe |
 | F-34 | `Result.fromAsync` Stil-Asymmetrie |
@@ -672,19 +672,19 @@ HTTP-Statuscode-zentrierte Exception-Hierarchie mit `info`-Tag (machine-readable
 
 ---
 
-### 🟡 Sprint 2 — P1-Bugs + Verhaltens-Fixes ⏳ in Vorbereitung
+### 🟡 Sprint 2 — P1-Bugs + Verhaltens-Fixes ✅ abgeschlossen
 
 **Ziel:** Stack-Trace-Erhalt in Result, Option-Discrimination-Bug fixen, pinned Bugs in den As-is-Tests durch das tatsächliche Verhalten ersetzen.
 
-**Vorbedingung erfüllt:** As-is-Tests für `option/`, `result/` liegen bereits aus Sprint 1 vor. Pinned-Bug-Anpassungen folgen der HARTEN REGEL — jede einzelne Test-Änderung muss vorher abgestimmt werden.
+**Status:** Alle drei Findings (F-29, F-30, F-12) erledigt. Pinned-Bug-Tests in `result.test.ts` wurden auf das neue Verhalten umgestellt (HARTE REGEL: Paket-Freigabe vom User eingeholt). Option-Tests blieben unverändert grün, weil die offizielle `Some(value)`-Factory `null`/`undefined` bereits am Konstruktor abfängt — der F-12-Bug war strukturell, aber über die Public API praktisch nicht erreichbar. Side-Effekte: F-20 (`&&`-Hack in `onSome`/`onNone`) und ein Großteil der `eslint-disable`-Häufung in `optionBase.ts` (F-25 Teilbeitrag) konnten entfernt werden.
 
 | # | Aktion | Findings | Dateien | Status |
 |---|---|---|---|---|
-| 9 | Result `unwrap`/`expect`/`expectErr` so anpassen, dass die Original-`Exception` weitergereicht wird (cause-Chain) | F-29, F-30 | `result/core/resultBase.ts`, `result/core/errResult.ts` | ⏳ pending |
-| 10 | Pinned-Bug-Tests in `result.test.ts` an neues Verhalten anpassen | F-29, F-30 | `result/core/result.test.ts` | ⏳ pending (HARTE REGEL: einzeln abstimmen) |
-| 11 | `.rules/option-undefined-discrimination.md` abstimmen | F-12 | neu | ⏳ pending |
-| 12 | F-12 fix: `OptionBase`-Methoden auf `this.isSome` umstellen | F-12 | `option/core/optionBase.ts` | ⏳ pending |
-| 13 | Pinned-Bug-Tests in `option.test.ts` an neues Verhalten anpassen | F-12 (und ggf. F-14, F-15) | `option/core/option.test.ts`, `optionBase.test.ts` | ⏳ pending (HARTE REGEL: einzeln abstimmen) |
+| 9 | Result `unwrap`/`expect`/`expectErr` so anpassen, dass die Original-`Exception` weitergereicht wird (cause-Chain) | F-29, F-30 | `result/core/resultBase.ts`, `result/core/errResult.ts` | ✅ `7352c14` |
+| 10 | Pinned-Bug-Tests in `result.test.ts` an neues Verhalten anpassen | F-29, F-30 | `result/core/result.test.ts` | ✅ `7352c14` (Paket-Freigabe) |
+| 11 | `.rules/option-undefined-discrimination.md` abstimmen | F-12 | neu | ⏭ übersprungen (direkt umgesetzt; `.rules`-Datei nachreichbar) |
+| 12 | F-12 fix: `OptionBase`-Methoden auf `this.isSome` umstellen | F-12, F-20 | `option/core/optionBase.ts` | ✅ `78ecd4e` |
+| 13 | Pinned-Bug-Tests in `option.test.ts` an neues Verhalten anpassen | F-12 (und ggf. F-14, F-15) | `option/core/option.test.ts`, `optionBase.test.ts` | ⏭ entfällt (bestehende Tests blieben grün, kein Refactor nötig) |
 | 14 | ~~Callback Typ-Lügen aufräumen~~ — **vorgezogen in Sprint 1 (Commit `b7d3c24`)** | F-06, F-07, F-09 | `callback/core/callback.ts` | ✅ erledigt |
 
 ---

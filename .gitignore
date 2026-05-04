@@ -28,6 +28,7 @@ dist
 # Local
 *.local
 TODO.md
+ANALYSIS.md
 
 # Coverage
 coverage

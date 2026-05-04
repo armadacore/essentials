@@ -42,14 +42,7 @@ The same shift applies to fallible operations (`Result` instead of `throw`) and 
 
 ## Documentation
 
-Full documentation lives in the [project wiki](https://github.com/armadacore/essentials/wiki):
-
-- [Option](https://github.com/armadacore/essentials/wiki/Option) — `Some` / `None`, the full `IOption` API and common before/after patterns
-- [Result](https://github.com/armadacore/essentials/wiki/Result) — `Ok` / `Err`, `Result.from` for catching exceptions, and the full `IResult` API
-- [Exception](https://github.com/armadacore/essentials/wiki/Exception) — base class, `InvalidStateException`, the 12 HTTP subclasses and `HttpStatusExceptionFactory`
-- [Callback](https://github.com/armadacore/essentials/wiki/Callback) — optional function references with `execute` / `executeOr` / `handover`
-- [Wire Format](https://github.com/armadacore/essentials/wiki/Wire-Format) — `serialize` / `deserialize` for shipping `Option`, `Result` and `Exception` across process boundaries
-- [Cross-Monad Bridges](https://github.com/armadacore/essentials/wiki/Cross-Monad-Bridges) — when (and when not) to convert between `Option` and `Result`
+Full documentation lives in the [project wiki](https://github.com/armadacore/essentials/wiki) — start there for the per-building-block pages, common patterns and the wire-format / cross-monad reference.
 
 Every public symbol is also annotated with TSDoc — your IDE hover shows the same contract that the wiki documents.
 

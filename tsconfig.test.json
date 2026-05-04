@@ -1,9 +1,16 @@
 {
-	"extends": "./tsconfig.json",
+	"extends": "./tsconfig.base.json",
 	"compilerOptions": {
-		"noEmit": true,
+		"composite": true,
+		"declaration": true,
+		"emitDeclarationOnly": true,
+		"outDir": ".tsbuild/test",
+		"rootDir": "src",
+		"tsBuildInfoFile": ".tsbuild/test/.tsbuildinfo",
 		"types": ["node", "vitest/globals"]
 	},
-	"include": ["src/**/*.ts"],
-	"exclude": ["dist", "node_modules"]
+	"include": ["src/**/*.test.ts"],
+	"references": [
+		{ "path": "./tsconfig.build.json" }
+	]
 }

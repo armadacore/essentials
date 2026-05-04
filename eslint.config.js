@@ -51,7 +51,7 @@ export default defineConfig([
 		settings: {
 			'import/resolver': {
 				typescript: {
-					project: ['tsconfig.json', 'tsconfig.test.json'],
+					project: ['tsconfig.build.json', 'tsconfig.test.json'],
 				},
 				node: true,
 			},
@@ -60,7 +60,7 @@ export default defineConfig([
 			parser: tseslint.parser,
 			globals: globals.node,
 			parserOptions: {
-				project: ['tsconfig.json', 'tsconfig.test.json'],
+				project: ['tsconfig.build.json', 'tsconfig.test.json'],
 				tsconfigRootDir: import.meta.dirname,
 				ecmaVersion: 'latest',
 				sourceType: 'module',

@@ -17,11 +17,11 @@
 		"LICENSE"
 	],
 	"scripts": {
-		"build": "npm run clean && tsc -p tsconfig.json && tsc-alias -p tsconfig.json -f",
-		"dev": "concurrently \"tsc -p tsconfig.json --watch\" \"tsc-alias -p tsconfig.json -w -f\"",
-		"clean": "rm -rf dist",
+		"build": "npm run clean && tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json -f",
+		"dev": "concurrently \"tsc -p tsconfig.build.json --watch\" \"tsc-alias -p tsconfig.build.json -w -f\"",
+		"clean": "rm -rf dist .tsbuild",
 		"lint": "npm run lint:type && npm run lint:eslint",
-		"lint:type": "tsc --noEmit -p tsconfig.json",
+		"lint:type": "tsc -b --pretty",
 		"lint:eslint": "eslint . --quiet",
 		"lint:kb": "lintkb",
 		"test": "vitest run",

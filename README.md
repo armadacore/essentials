@@ -1,15 +1,44 @@
 # @armadacore/essentials
 
-Foundational TypeScript building blocks for explicit, exception-aware control flow.
+> This library exists because I wanted Rust's robustness and explicit control flow in TypeScript. TypeScript's type system is strong enough to express "this value might be missing" or "this call might fail" — but the language itself doesn't force you to handle those cases. `null`, `undefined`, and thrown exceptions slip through type signatures and surface as runtime bugs. `essentials` brings the patterns that solve this in Rust — `Option`, `Result`, typed exceptions — to TypeScript in a form that the compiler actually enforces.
 
-Provides:
+## The problem this solves
 
-- **`Option<T>`** — explicit absence handling, inspired by Rust's `Option`.
-- **`Result<T>`** — error-as-value with a fixed `Exception` failure type.
-- **`Exception`** hierarchy — HTTP-status-aware error types with an `info` tag and `cause` propagation.
-- **`Callback<T>`** — wrapper around an optional function value.
+In an average TypeScript codebase, three things tend to go wrong silently:
 
-All public API surfaces are documented inline via TSDoc; IDE hover shows the full contract per symbol.
+1. **Absence is invisible.** A function returns `User | null` or `User | undefined`. The caller forgets the check. The bug shows up in production.
+2. **Failure is invisible.** A function throws. The signature says `: User`. Nothing in the type system tells the caller that this call can blow up, or with what.
+3. **Errors lose context.** An exception bubbles up, gets re-thrown, and somewhere along the way the original cause is lost — leaving you with a stack trace that points nowhere useful.
+
+`essentials` makes all three of these explicit at the type level. You can't accidentally ignore an absent value, you can't accidentally ignore a failure, and you can't accidentally drop the cause of an error.
+
+## What you get
+
+- **`Option<T>`** — a value that is either `Some(value)` or `None`. Replaces `T | null` and `T | undefined` in your domain types. The compiler forces you to handle both branches before you can touch the value.
+- **`Result<T>`** — a value that is either `Ok(value)` or `Err(exception)`. Replaces "this function throws". The failure becomes part of the return type, with a fixed `Exception` error channel so handling stays uniform.
+- **`Exception`** — a typed error hierarchy with HTTP-status awareness, an `info` discriminator, and proper `cause` propagation. Built so you can throw, catch, re-wrap, and serialize without losing the original failure.
+- **`Callback<T>`** — an `Option`-shaped wrapper for optional function values, so "the consumer might or might not have provided a handler" stops being a special case.
+
+All public API is documented inline via TSDoc — IDE hover shows the full contract per symbol.
+
+## The benefit, in one snippet
+
+```typescript
+// Before — the compiler is fine with all of this. Production isn't.
+const findUser = (id: string): User | null => { /* ... */ };
+
+const user = findUser(id);
+console.log(user.name);   // runtime: Cannot read properties of null
+
+// After — the compiler refuses to let you ignore the absent case.
+const findUser = (id: string): IOption<User> => { /* ... */ };
+
+const userOption = findUser(id);
+userOption.onSome((user) => console.log(user.name));
+userOption.onNone(() => console.log("not found"));
+```
+
+The same shift applies to fallible operations (`Result` instead of `throw`) and to error handling (`Exception` instead of bare `Error`). The pattern is always the same: **make the failure mode part of the type, so the compiler enforces handling**.
 
 ## Install
 
@@ -18,43 +47,6 @@ npm install @armadacore/essentials
 ```
 
 Requires Node.js `>=20` and TypeScript `~5.7`.
-
-## Build
-
-```bash
-npm install
-npm run build
-```
-
-The compiled bundle is written to `dist/`. Path aliases declared in `tsconfig.json` (`essentials:*`) are resolved at build time via [`tsc-alias`](https://github.com/justkey007/tsc-alias).
-
-## Scripts
-
-| Script | Purpose |
-|---|---|
-| `npm run build` | Produce `dist/` (TS compile + alias resolution). |
-| `npm run dev` | Watch-mode build. |
-| `npm run lint` | Type-check **and** ESLint with the project's strict ruleset. |
-| `npm run lint:type` | TypeScript type-check only. |
-| `npm run lint:eslint` | ESLint only. |
-| `npm run lint:kb` | `lintkb` knowledge-base lookup for the project's custom rules. |
-| `npm test` | Run the Vitest suite once. |
-| `npm run test:watch` | Vitest in watch mode. |
-| `npm run test:coverage` | Vitest with V8 coverage. |
-| `npm run format` | Run Prettier across `src/`. |
-| `npm run format:check` | Verify Prettier formatting. |
-| `npm run clean` | Remove `dist/`. |
-
-## Project conventions
-
-The project enforces a strict set of conventions:
-
-- **`null` / `undefined` are forbidden** in domain types — use `Option<T>` instead.
-- **Feature folder structure** (`core/`, `models/`, `guards/`, optional `Constants.ts`).
-- **Barrel-only imports** between features — internal paths (`feature/core/foo`) are off-limits to consumers.
-- **Strict `naming-convention`** rules for interfaces (`I*`), guards (`is*`), classes, etc.
-
-ESLint custom rules live in [`.eslint-rules/`](./.eslint-rules/) and the human-readable rationales in [`.rules/`](./.rules/).
 
 ## License
 

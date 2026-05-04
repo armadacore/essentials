@@ -3,7 +3,7 @@
 ## Regel
 
 Eigener Code verwendet **niemals** `null` oder `undefined` — weder als Wert, noch im Vergleich.
-Optionale Werte werden ausschließlich über `Option<T>` aus `@timi/timi-essentials` ausgedrückt.
+Optionale Werte werden ausschließlich über `Option<T>` aus `@armadacore/essentials` ausgedrückt.
 
 ## Konvention im Projekt
 

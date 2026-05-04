@@ -1,5 +1,5 @@
 {
-	"name": "@timi/essentials",
+	"name": "@armadacore/essentials",
 	"version": "0.0.0",
 	"description": "Foundational TypeScript building blocks: Option, Result, Exception hierarchy, Callback wrapper, and small utilities.",
 	"type": "module",

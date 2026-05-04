@@ -1,6 +1,6 @@
-# @timi/essentials
+# @armadacore/essentials
 
-Foundational TypeScript building blocks extracted from the [`timi`](https://github.com/anomalyco/timi) project.
+Foundational TypeScript building blocks. Originally extracted from the [`timi`](https://github.com/anomalyco/timi) project; now maintained as a standalone library under the `@armadacore` scope.
 
 Provides:
 
@@ -17,7 +17,7 @@ A full code analysis and a four-sprint cleanup plan are documented in [`ANALYSIS
 ## Install
 
 ```bash
-npm install @timi/essentials
+npm install @armadacore/essentials
 ```
 
 ## Build

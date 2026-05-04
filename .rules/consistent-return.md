@@ -11,7 +11,7 @@ Verboten ist insbesondere:
 
 ## Hinweis zu den verwendeten Typen
 
-`Option`, `None`, `Some`, `IOption`, `Result`, `Err`, `Ok` und `IResult` werden aus `@timi/timi-essentials` importiert.
+`Option`, `None`, `Some`, `IOption`, `Result`, `Err`, `Ok` und `IResult` werden aus `@armadacore/essentials` importiert.
 
 ## Konvention im Projekt
 

@@ -1,8 +1,8 @@
-# `timi-essentials` — Analyse & Migrationsplan
+# `@armadacore/essentials` — Analyse & Migrationsplan
 
 Dieses Dokument fasst die vollständige Code-Analyse der Library `@timi/timi-essentials` (ursprünglich Bestandteil des `timi`-Monorepos) zusammen und definiert einen viergliedrigen Sprint-Plan für die Aufräumarbeit, die im Zuge der Auslagerung in dieses eigene Repository erfolgen soll.
 
-Die Analyse wurde im Read-Only-Modus, Datei für Datei, gemeinsam mit dem ursprünglichen Source-Tree durchgeführt. Die ursprünglich vorhandenen Features `check/` und `timer/` wurden bei der Auslagerung in dieses Repository **entfernt**, da sie für `@timi/essentials` als eigenständige Library nicht benötigt werden. Alle anderen Beobachtungen, Befunde und Empfehlungen sind hier vollständig dokumentiert.
+Die Analyse wurde im Read-Only-Modus, Datei für Datei, gemeinsam mit dem ursprünglichen Source-Tree durchgeführt. Die ursprünglich vorhandenen Features `check/` und `timer/` wurden bei der Auslagerung in dieses Repository **entfernt**, da sie für `@armadacore/essentials` als eigenständige Library nicht benötigt werden. Alle anderen Beobachtungen, Befunde und Empfehlungen sind hier vollständig dokumentiert.
 
 ---
 

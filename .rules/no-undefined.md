@@ -4,7 +4,7 @@
 
 Eigener Code verwendet **niemals** das Schlüsselwort `undefined` als Wert
 oder Vergleichsoperand. Optionale Werte werden ausschließlich über `Option<T>`
-aus `@timi/timi-essentials` ausgedrückt; Side-Effects ohne Rückgabewert
+aus `@armadacore/essentials` ausgedrückt; Side-Effects ohne Rückgabewert
 werden über die passende API-Methode oder einen impliziten Return formuliert.
 
 ## Konvention im Projekt

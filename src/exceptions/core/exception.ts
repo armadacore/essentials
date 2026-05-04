@@ -1,4 +1,6 @@
 import { type IException } from '../models/IException';
+import { type SerializedException } from '../models/SerializedException';
+import { exceptionFactories } from './exceptionFactories';
 
 /**
  * Exception class that extends Error with additional info property.
@@ -67,6 +69,53 @@ export class Exception extends Error implements IException {
 		if (error.stack) {
 			exception.stack = error.stack;
 		}
+
+		return exception;
+	}
+
+	/**
+	 * Lossless wire-format conversion: turn an {@link Exception} (or
+	 * any subclass) into its {@link SerializedException} envelope.
+	 *
+	 * Reuses {@link Exception.toJSON} so the serialised shape stays
+	 * single-sourced. `name`, `message`, `info` and `cause` survive;
+	 * `stack` is dropped (matching the `toJSON` policy of not leaking
+	 * implementation details into payloads).
+	 *
+	 * `cause` is pass-through `unknown` — callers are responsible for
+	 * ensuring it is JSON-serialisable if they intend to ship the
+	 * envelope through `JSON.stringify`.
+	 */
+	public static serialize(exception: Exception): SerializedException {
+		return exception.toJSON() as SerializedException;
+	}
+
+	/**
+	 * Inverse of {@link Exception.serialize}. Reconstructs an
+	 * {@link Exception} from its {@link SerializedException} envelope.
+	 *
+	 * Looks up the concrete subclass by `name` against the registry in
+	 * {@link exceptionFactories}. Known names (e.g.
+	 * `'BadRequestException'`) yield an instance of the matching
+	 * subclass; unknown names degrade gracefully to a plain
+	 * {@link Exception} so that a sender shipping a subclass the
+	 * receiver does not know about still produces a usable error.
+	 *
+	 * `cause` is restored verbatim. `stack` is not reconstructed —
+	 * the receiver's own stack frame at the call site is used.
+	 */
+	public static deserialize(envelope: SerializedException): Exception {
+		const ctor = exceptionFactories.registry.get(envelope.name);
+
+		if (ctor) {
+			return new ctor(envelope.message, { cause: envelope.cause });
+		}
+
+		// Unknown subclass — fall back to a generic Exception, but
+		// preserve the envelope's `info` so the receiver still sees the
+		// original business tag rather than the default 'UNKNOWN_ERROR'.
+		const exception = new Exception(envelope.message, { cause: envelope.cause });
+		exception._info = envelope.info;
 
 		return exception;
 	}

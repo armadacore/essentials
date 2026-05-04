@@ -1,6 +1,7 @@
-import { Exception } from 'essentials:exceptions';
+import { Exception, InvalidStateException } from 'essentials:exceptions';
 import { type IOption } from 'essentials:option';
 import { type IResult } from '../models/IResult';
+import { type SerializedResult } from '../models/SerializedResult';
 import { ErrResult } from './errResult';
 import { OkResult } from './okResult';
 import { resultFactories } from './resultBase';
@@ -31,6 +32,51 @@ resultFactories.ok = Ok;
 resultFactories.err = Err;
 
 /**
+ * Lossless wire-format conversion: turn an {@link IResult} into its
+ * {@link SerializedResult} envelope. The result is plain data and
+ * survives `JSON.stringify` / `JSON.parse` round-trips intact.
+ *
+ * The error branch delegates to {@link Exception.serialize}, so any
+ * library-known {@link Exception} subclass round-trips with its
+ * concrete identity preserved (see the registry in
+ * `exceptions/core/exceptionRegistry.ts`).
+ *
+ * Only operates on a single Result — does not walk into nested
+ * objects / arrays. Callers that need deep serialisation are expected
+ * to map over their data structure themselves and call `serialize`
+ * per leaf.
+ */
+const serialize = <T>(result: IResult<T>): SerializedResult<T> => {
+	return result.match<SerializedResult<T>>(
+		(value) => ({ isOk: true, value }),
+		(error) => ({ isOk: false, error: Exception.serialize(error) }),
+	);
+};
+
+/**
+ * Inverse of {@link serialize}. Reconstructs an {@link IResult} from
+ * its {@link SerializedResult} envelope. Round-trip property:
+ *
+ *     deserialize(serialize(res))  ≡  res    (structurally)
+ *
+ * The error branch delegates to {@link Exception.deserialize}, so the
+ * concrete subclass is restored when known to the registry, otherwise
+ * a plain {@link Exception} is produced (with `info` preserved from
+ * the envelope).
+ *
+ * Only handles the documented envelope shape; throws an
+ * {@link InvalidStateException} on anything else. JSON parsing,
+ * walking arrays / objects, or guessing about foreign data is
+ * deliberately out of scope.
+ */
+const deserialize = <T>(envelope: SerializedResult<T>): IResult<T> => {
+	if (envelope.isOk) return Ok(envelope.value);
+	if (envelope.isOk === false) return Err(Exception.deserialize(envelope.error));
+
+	throw new InvalidStateException('deserialize received a value that is not a SerializedResult envelope');
+};
+
+/**
  * Namespace bundling all {@link IResult}-related factories and
  * conversions. Prefer this over the top-level {@link Ok} / {@link Err}
  * factories when you want a single import surface
@@ -42,6 +88,9 @@ export const Result = {
 
 	/** Alias for the top-level {@link Err} factory. */
 	err: Err,
+
+	serialize,
+	deserialize,
 
 	/**
 	 * Runs `fn` and lifts the outcome into an {@link IResult}: the

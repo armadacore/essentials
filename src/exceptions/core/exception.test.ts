@@ -1,4 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import {
+	BadRequestException,
+	InvalidStateException,
+	NotFoundException,
+	type SerializedException,
+} from 'essentials:exceptions';
 import { Exception } from './exception';
 
 /**
@@ -142,6 +148,121 @@ describe('Exception', () => {
 				expect(caught).toBeInstanceOf(Error);
 				expect(caught).toBeInstanceOf(Exception);
 			}
+		});
+	});
+
+	describe('Exception.serialize', () => {
+		it('emits an envelope with name, message, info, cause for a base Exception', () => {
+			const env = Exception.serialize(new Exception('boom'));
+
+			expect(env.name).toBe('Exception');
+			expect(env.message).toBe('boom');
+			expect(env.info).toBe('UNKNOWN_ERROR');
+			expect(env.cause).toBeUndefined();
+		});
+
+		it('emits the subclass name and its specific info', () => {
+			const env = Exception.serialize(new NotFoundException('gone'));
+
+			expect(env.name).toBe('NotFoundException');
+			expect(env.message).toBe('gone');
+			expect(env.info).toBe('NOT_FOUND');
+			expect(env.cause).toBeUndefined();
+		});
+
+		it('passes `cause` through verbatim', () => {
+			const cause = new Error('underlying');
+			const env = Exception.serialize(new BadRequestException('top', { cause }));
+
+			expect(env.cause).toBe(cause);
+		});
+
+		it('does not include `stack`', () => {
+			const env = Exception.serialize(new Exception('boom')) as SerializedException & { stack?: unknown };
+
+			expect(env.stack).toBeUndefined();
+		});
+	});
+
+	describe('Exception.deserialize', () => {
+		it('reconstructs a known subclass with the matching constructor', () => {
+			const restored = Exception.deserialize({
+				name: 'NotFoundException',
+				message: 'missing',
+				info: 'NOT_FOUND',
+			});
+
+			expect(restored).toBeInstanceOf(NotFoundException);
+			expect(restored.message).toBe('missing');
+			expect(restored.info).toBe('NOT_FOUND');
+		});
+
+		it('reconstructs InvalidStateException', () => {
+			const restored = Exception.deserialize({
+				name: 'InvalidStateException',
+				message: 'illegal',
+				info: 'INVALID_STATE',
+			});
+
+			expect(restored).toBeInstanceOf(InvalidStateException);
+		});
+
+		it('falls back to plain Exception for an unknown name', () => {
+			const restored = Exception.deserialize({
+				name: 'TotallyUnknownException',
+				message: 'msg',
+				info: 'WHATEVER',
+			});
+
+			expect(restored).toBeInstanceOf(Exception);
+			expect(restored).not.toBeInstanceOf(NotFoundException);
+		});
+
+		it('preserves the envelope `info` on the unknown-name fallback', () => {
+			// Critical: a sender may ship an exception subclass the
+			// receiver does not know. The receiver must still see the
+			// original `info` tag for machine-readable categorisation,
+			// not the default 'UNKNOWN_ERROR'.
+			const restored = Exception.deserialize({
+				name: 'UnknownException',
+				message: 'msg',
+				info: 'CUSTOM_TAG',
+			});
+
+			expect(restored.info).toBe('CUSTOM_TAG');
+		});
+
+		it('restores `cause` verbatim', () => {
+			const cause = { kind: 'underlying', detail: 42 };
+			const restored = Exception.deserialize({
+				name: 'BadRequestException',
+				message: 'top',
+				info: 'BAD_REQUEST',
+				cause,
+			});
+
+			expect((restored as Exception & { cause?: unknown }).cause).toBe(cause);
+		});
+	});
+
+	describe('Exception.serialize / Exception.deserialize round-trip', () => {
+		it('preserves the subclass identity for every registered HTTP exception', () => {
+			const original = new BadRequestException('bad input');
+			const restored = Exception.deserialize(Exception.serialize(original));
+
+			expect(restored).toBeInstanceOf(BadRequestException);
+			expect(restored.message).toBe('bad input');
+			expect(restored.info).toBe('BAD_REQUEST');
+		});
+
+		it('survives JSON.stringify / JSON.parse', () => {
+			const original = new NotFoundException('gone');
+			const json = JSON.stringify(Exception.serialize(original));
+			const restored = Exception.deserialize(JSON.parse(json) as SerializedException);
+
+			expect(restored).toBeInstanceOf(NotFoundException);
+			expect(restored.message).toBe('gone');
+			expect(restored.info).toBe('NOT_FOUND');
 		});
 	});
 });

@@ -393,4 +393,124 @@ describe('ResultBase API (as-is behaviour)', () => {
 			).toBe('err:boom');
 		});
 	});
+
+	describe('Result.serialize', () => {
+		it('emits { isOk: true, value } for Ok', () => {
+			expect(Result.serialize(Ok(1))).toEqual({ isOk: true, value: 1 });
+		});
+
+		it('emits { isOk: false, error: <SerializedException> } for Err', () => {
+			const env = Result.serialize(Err<number>(new NotFoundException('missing')));
+
+			expect(env.isOk).toBe(false);
+			if (env.isOk === false) {
+				expect(env.error.name).toBe('NotFoundException');
+				expect(env.error.message).toBe('missing');
+				expect(env.error.info).toBe('NOT_FOUND');
+				expect(env.error.cause).toBeUndefined();
+			}
+		});
+
+		it('preserves falsy non-nullish payloads on Ok', () => {
+			expect(Result.serialize(Ok(0))).toEqual({ isOk: true, value: 0 });
+			expect(Result.serialize(Ok(''))).toEqual({ isOk: true, value: '' });
+			expect(Result.serialize(Ok(false))).toEqual({ isOk: true, value: false });
+		});
+
+		it('does not walk into nested structures — single-Result scope', () => {
+			// Same contract as Option.serialize: the envelope's `value`
+			// is whatever the Ok carried, verbatim. Nested Results stay
+			// as ResultBase instances, not envelopes.
+			const inner = Ok(2);
+			const outer = Ok([inner]);
+			const env = Result.serialize(outer);
+
+			expect(env).toEqual({ isOk: true, value: [inner] });
+		});
+	});
+
+	describe('Result.deserialize', () => {
+		it('reconstructs Ok from an Ok envelope', () => {
+			const restored = Result.deserialize<number>({ isOk: true, value: 7 });
+
+			expect(restored.isOk).toBe(true);
+			expect(restored.unwrap()).toBe(7);
+		});
+
+		it('reconstructs Err with the concrete subclass when known to the registry', () => {
+			const restored = Result.deserialize<number>({
+				isOk: false,
+				error: {
+					name: 'NotFoundException',
+					message: 'missing',
+					info: 'NOT_FOUND',
+				},
+			});
+
+			expect(restored.isErr).toBe(true);
+			expect(restored.err()).toBeInstanceOf(NotFoundException);
+			expect(restored.err().message).toBe('missing');
+			expect(restored.err().info).toBe('NOT_FOUND');
+		});
+
+		it('falls back to a generic Exception for an unknown name, preserving info', () => {
+			const restored = Result.deserialize<number>({
+				isOk: false,
+				error: {
+					name: 'MyCustomException',
+					message: 'whatever',
+					info: 'MY_CUSTOM',
+				},
+			});
+
+			const error = restored.err();
+
+			expect(error).toBeInstanceOf(Exception);
+			expect(error.message).toBe('whatever');
+			expect(error.info).toBe('MY_CUSTOM');
+		});
+
+		it('throws InvalidStateException on a non-envelope shape', () => {
+			expect(() => Result.deserialize({} as never)).toThrow(InvalidStateException);
+		});
+	});
+
+	describe('Result.serialize / Result.deserialize round-trip', () => {
+		it('is lossless for Ok<number>', () => {
+			const restored = Result.deserialize(Result.serialize(Ok(42)));
+
+			expect(restored.isOk).toBe(true);
+			expect(restored.unwrap()).toBe(42);
+		});
+
+		it('preserves the Err subclass identity through round-trip', () => {
+			const original = Err<number>(new NotFoundException('gone'));
+			const restored = Result.deserialize(Result.serialize(original));
+
+			expect(restored.isErr).toBe(true);
+			expect(restored.err()).toBeInstanceOf(NotFoundException);
+			expect(restored.err().message).toBe('gone');
+			expect(restored.err().info).toBe('NOT_FOUND');
+		});
+
+		it('survives JSON.stringify / JSON.parse for Ok<falsy>', () => {
+			for (const payload of [0, '', false]) {
+				const json = JSON.stringify(Result.serialize(Ok(payload)));
+				const restored = Result.deserialize<typeof payload>(JSON.parse(json));
+
+				expect(restored.isOk).toBe(true);
+				expect(restored.unwrap()).toBe(payload);
+			}
+		});
+
+		it('survives JSON.stringify / JSON.parse for Err with a known subclass', () => {
+			const original = Err<number>(new NotFoundException('gone'));
+			const json = JSON.stringify(Result.serialize(original));
+			const restored = Result.deserialize<number>(JSON.parse(json));
+
+			expect(restored.isErr).toBe(true);
+			expect(restored.err()).toBeInstanceOf(NotFoundException);
+			expect(restored.err().message).toBe('gone');
+		});
+	});
 });

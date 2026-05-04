@@ -32,22 +32,6 @@ const findThing = (id: string): IOption<Thing> => Option.from(cache.get(id));
 
 ```typescript
 // RICHTIG — generisch, beide Pfade liefern denselben Typ IOption<T>
-const tryRead = <T>(key: string, parse: (raw: string) => T): IOption<T> =>
-    Option.from(localStorage.getItem(key)).map(parse);
-```
-
-### useEffect mit Early-Return-Guard
-
-Der Cleanup-Pfad gibt eine Funktion `() => void` zurück. Damit der Guard-Pfad denselben Typ liefert, gibt er eine leere Funktion `() => {}` zurück — beide Pfade haben Typ `() => void`.
-
-```typescript
-useEffect(() => {
-    const containerOption = Option.from(document.getElementById('x'));
-    if (containerOption.isNone) return () => {};   // Typ: () => void
-
-    const container = containerOption.unwrap();
-    container.addEventListener('scroll', onScroll);
-
-    return () => container.removeEventListener('scroll', onScroll);   // Typ: () => void
-}, []);
+const tryGet = <K, V>(store: Map<K, V>, key: K): IOption<V> =>
+    Option.from(store.get(key));
 ```

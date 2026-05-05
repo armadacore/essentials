@@ -1,5 +1,9 @@
 # @armadacore/essentials
 
+[![npm version](https://img.shields.io/npm/v/@armadacore/essentials.svg)](https://www.npmjs.com/package/@armadacore/essentials)
+[![license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/armadacore/essentials/blob/master/LICENSE)
+[![node](https://img.shields.io/node/v/@armadacore/essentials.svg)](https://nodejs.org)
+
 > This library exists because I wanted Rust's robustness and explicit control flow in TypeScript. TypeScript's type system is strong enough to express "this value might be missing" or "this call might fail" — but the language itself doesn't force you to handle those cases. `null`, `undefined`, and thrown exceptions slip through type signatures and surface as runtime bugs. `essentials` brings the patterns that solve this in Rust — `Option`, `Result`, typed exceptions — to TypeScript in a form that the compiler actually enforces.
 
 ## The problem this solves

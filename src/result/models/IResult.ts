@@ -108,6 +108,13 @@ export interface IResult<T> {
 	onErr(fn: (error: Exception) => void): void;
 
 	/**
+	 * Marks the {@link Err} branch as intentionally dismissed. No-op
+	 * on both variants. Use to make explicit that a fallible result is
+	 * being thrown away on purpose, instead of silently dropping it.
+	 */
+	ignoreErr(): void;
+
+	/**
 	 * Pattern-matches on the variant. Calls `onOk(value)` for
 	 * {@link Ok}, `onErr(error)` for {@link Err}, and returns the
 	 * result. The total replacement for `if (res.isOk) … else …`.

@@ -87,6 +87,8 @@ export abstract class ResultBase<T> implements IResult<T> {
 		if (this.isErr) fn(this.err() as Exception);
 	}
 
+	ignoreErr(): void {}
+
 	match<U>(onOk: (value: T) => U, onErr: (error: Exception) => U): U {
 		return this.isOk ? onOk(this.ok() as T) : onErr(this.err() as Exception);
 	}

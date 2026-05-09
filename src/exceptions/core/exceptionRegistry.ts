@@ -9,6 +9,7 @@ import { InternalServerErrorException } from './internalServerErrorException';
 import { InvalidStateException } from './invalidStateException';
 import { MethodNotAllowedException } from './methodNotAllowedException';
 import { NotFoundException } from './notFoundException';
+import { NotImplementedException } from './notImplementedException';
 import { ServiceUnavailableException } from './serviceUnavailableException';
 import { TooManyRequestsException } from './tooManyRequestsException';
 import { UnauthorizedException } from './unauthorizedException';
@@ -32,6 +33,7 @@ const knownExceptions: readonly IExceptionConstructor[] = [
 	UnauthorizedException,
 	ForbiddenException,
 	NotFoundException,
+	NotImplementedException,
 	MethodNotAllowedException,
 	ConflictException,
 	UnprocessableEntityException,

@@ -12,6 +12,7 @@ export * from './core/internalServerErrorException';
 export * from './core/invalidStateException';
 export * from './core/methodNotAllowedException';
 export * from './core/notFoundException';
+export * from './core/notImplementedException';
 export * from './core/serviceUnavailableException';
 export * from './core/tooManyRequestsException';
 export * from './core/unauthorizedException';

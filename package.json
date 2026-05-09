@@ -1,6 +1,6 @@
 {
 	"name": "@armadacore/essentials",
-	"version": "0.2.0",
+	"version": "0.3.0",
 	"description": "Foundational TypeScript building blocks: Option, Result, Exception hierarchy, Callback wrapper, and small utilities.",
 	"type": "module",
 	"main": "dist/index.js",

@@ -1,10 +1,7 @@
-import { HttpStatusExceptionBase } from './httpStatusExceptionBase';
+import { Exception } from './exception';
 
-/** Represents an HTTP `501 Not Implemented` error. */
-export class NotImplementedException extends HttpStatusExceptionBase {
-	/** HTTP status code carried by every instance: `501`. */
-	static readonly httpStatus = 501;
-
+/** Thrown when a method or feature has not been implemented yet. */
+export class NotImplementedException extends Exception {
 	/** Defaults `message` to `'Not Implemented'` and tags `info` as `'NOT_IMPLEMENTED'`. */
 	constructor(message?: string, options?: { cause?: unknown }) {
 		super(message || 'Not Implemented', options);
